@@ -20,7 +20,14 @@
 - Cartões alinhados, chips de perguntas sequenciais no treino, `aria-label` nos estados, suporte a `prefers-reduced-motion`.
 - Licença MIT, GitHub Actions (Node 20/22/24 × GHC 9.4/9.8/9.12 + job de interface).
 
+**Banco de demonstração (52 questões)**
+- 23 de teoria e 29 de prática, nos 14 temas, em 4 exames de 20 valores (Exame A, Exame B, Mini-teste A, Mini-teste B); dificuldade 21 fácil / 21 média / 10 difícil. Presets do exame aleatório: 6+14, 5+15 e 2+5.
+- Todas as soluções de referência e respostas de teoria verificadas em GHC; mutantes (soluções erradas plausíveis) rejeitados pelos testes; distratores sem ambiguidade.
+- `npm run check:originality`: compara o banco público com o privado (linhas, nomes de funções, similaridade de enunciados).
+- Classificação ponta a ponta de cada exame (referências = 20/20, em branco = 0, penalização) e conclusão de cada exame pela interface.
+
 **Correções**
+- A lista de exames mostrava um ponto e vírgula solto nos avisos sobre respostas.
 - A interface escrevia o texto "null" em alguns ecrãs.
 - Ids como `__proto__` já não são aceites pela API.
 

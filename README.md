@@ -2,12 +2,12 @@
 
 Aplicação local (HTML/JS + Node, **sem dependências npm**) para praticar Haskell em formato de exame: exames completos, exames aleatórios com a mesma distribuição de cotações, treino por tema, correção automática por testes e histórico de desempenho.
 
-> **Este repositório não inclui exames, enunciados nem PDFs da FEUP.** Vem com um banco de **16 questões de demonstração originais** (2 exames fictícios) para a aplicação funcionar logo após clonar. Podes carregar o teu próprio banco localmente (ver [Usar o teu próprio banco](#usar-o-teu-próprio-banco)).
+> **Este repositório não inclui exames, enunciados nem PDFs da FEUP.** Vem com um banco de **52 questões de demonstração originais** (23 de teoria e 29 de prática, nos 14 temas da UC, repartidas por 4 exames fictícios de 20 valores) para a aplicação funcionar logo após clonar. Podes carregar o teu próprio banco localmente (ver [Usar o teu próprio banco](#usar-o-teu-próprio-banco)).
 
 ## Requisitos
 
 - [Node.js](https://nodejs.org/) ≥ 20
-- [GHC](https://www.haskell.org/ghc/) com `runghc` no `PATH` (usado para correr o teu código e os testes)
+- [GHC](https://www.haskell.org/ghc/) com `runghc` no `PATH` (usado para correr o teu código e os testes). Desenvolvido com GHC 9.12; a CI cobre 9.4, 9.8 e 9.12 (ver [Qualidade](#qualidade))
 - Opcional: Google Chrome/Chromium e Node ≥ 22, só para os testes de interface (são ignorados se faltarem)
 
 Se o GHC não estiver instalado, a aplicação arranca na mesma, mas avisa (no terminal e na interface) que as perguntas práticas não podem ser corrigidas.
@@ -25,7 +25,7 @@ Para usar outra porta: `PORT=5000 npm start`.
 
 | Modo | O que faz |
 |---|---|
-| **Exame original** | Refaz um exame completo (teoria → prática) com a ordem e cotações definidas, temporizador opcional e sem soluções até entregares. |
+| **Exame original** | Refaz um exame completo (teoria → prática) com a ordem e cotações definidas, temporizador opcional e sem soluções até entregares. A nota final é convertida para a escala 0–20. |
 | **Exame aleatório** | Gera um exame com uma estrutura de cotações à escolha (presets ou personalizada), filtrável por tema, exame e dificuldade. |
 | **Treino por tema** | Escolhes matérias; feedback imediato; podes ver as soluções de referência (rotuladas). |
 | **Repetir erradas** | Cria uma tentativa só com as perguntas erradas/parciais. |
@@ -58,17 +58,23 @@ O formato está descrito em [docs/BANK_FORMAT.md](docs/BANK_FORMAT.md); o banco 
 ## Qualidade
 
 ```bash
-npm test               # lógica, servidor/API, banco de demonstração (inclui validação em GHC) e interface (Chrome headless)
-npm run validate       # referências vs testes; teoria verificada em GHC
-npm run test:private   # só se tiveres test/private/ (testes ligados a um banco privado)
-PFL_SKIP_E2E=1 npm test   # sem os testes de interface (não precisam de Chrome)
+npm test                     # lógica, servidor/API, banco de demonstração, classificação dos exames e interface (Chrome headless)
+npm run validate             # referências vs testes; teoria verificada em GHC (usa o banco ativo: bank/src se existir)
+PFL_BANK=demo npm run validate   # o mesmo, só para o banco de demonstração
+npm run check:originality    # compara o banco público com o privado (só faz algo se existir bank/src)
+npm run test:private         # só se tiveres test/private/ (testes ligados a um banco privado)
+PFL_SKIP_E2E=1 npm test      # sem os testes de interface (não precisam de Chrome)
 ```
 
-Os testes públicos constroem sempre o banco de demonstração, por isso não dependem do que tenhas em `bank/src/`. A CI (GitHub Actions) corre-os com várias versões de Node (20, 22, 24) e GHC (9.4, 9.8, 9.12), mais um job de interface.
+Os testes públicos constroem sempre o banco de demonstração, por isso não dependem do que tenhas em `bank/src/`. Para além das soluções de referência, validam **mutantes**: soluções erradas mas plausíveis que os testes de cada exercício têm de rejeitar. A CI (GitHub Actions) corre `npm test` com Node 20, 22 e 24 e GHC 9.4, 9.8 e 9.12, mais um job de interface.
 
 ## Segurança e privacidade
 
-O servidor só escuta em `127.0.0.1`, valida `Host` e `Origin` e exige um cabeçalho próprio nas escritas. **Executar testes corre código teu com `runghc`, com os teus privilégios** — não expões a aplicação à rede. Detalhes e resultado da auditoria em [SECURITY.md](SECURITY.md).
+O servidor só escuta em `127.0.0.1`, valida `Host` e `Origin` e exige um cabeçalho próprio nas escritas.
+
+> ⚠️ **A execução de código Haskell não está isolada.** "Executar testes" corre o código do editor com `runghc`, com os teus privilégios e o teu ambiente (incluindo variáveis de ambiente). Corre apenas código teu ou em que confies, **não** abras ficheiros `.hs` de desconhecidos e **nunca** exponhas esta aplicação à rede nem a ponhas num servidor público.
+
+Detalhes e resultado da auditoria em [SECURITY.md](SECURITY.md).
 
 ## Licença
 
@@ -82,5 +88,5 @@ docs/               formato do banco                    .github/    CI
 bank/src/           banco privado (ignorado pelo Git)
 server/             API, execução de testes (Haskell), verificação de restrições
 public/             interface (sem build)               test/       testes públicos
-scripts/            build do banco, validação, relatórios
+scripts/            build do banco, validação, originalidade, relatórios
 ```

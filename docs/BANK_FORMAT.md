@@ -104,9 +104,18 @@ sumSquares (x:xs) = x * x + sumSquares xs` }],
 
 `C.noImport`, `C.recursion`, `C.noRecursion`, `C.comprehension`, `C.noComprehension`, `C.hof`, `C.noHof`, `C.forbid([ids], texto)`, `C.require([ids], texto)`. A verificação é **textual** (heurística), não semântica.
 
+## Boas práticas (o banco de demonstração segue-as)
+
+- **Os testes têm de rejeitar soluções erradas plausíveis**, não só aceitar a referência: inclui casos-limite (lista vazia, um elemento, repetidos, negativos, empates) e exemplos que distingam variantes comuns (ordem trocada, off-by-one, perder repetidos). O banco de demonstração prova-o em `test/mutants.mjs`.
+- Em teoria, **nenhum distrator pode ser igual ao resultado verificado** (`npm run validate` verifica-o no banco de demonstração).
+- Os enunciados só suportam o markdown descrito acima: **não uses `**negrito**`** (apareceria com asteriscos).
+- Evita recursão infinita em soluções erradas que queiras testar: o servidor limita o tempo, mas não a memória.
+- Se o teu banco derivar de exames de terceiros, mantém-no em `bank/src/` e `npm run check:originality` ajuda a garantir que um banco público não o reproduz.
+
 ## Validar
 
 ```bash
 npm run build       # estrutura: ids únicos, temas, somas das cotações…
 npm run validate    # referências vs testes; teoria verificada em GHC
+npm run check:originality   # (opcional) compara o banco público com um banco privado em bank/src
 ```
