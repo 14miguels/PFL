@@ -142,22 +142,26 @@ myReverse = foldr (\x acc -> acc ++ [x]) []` }],
   {
     id: 'miniA-B05', n: 'Pergunta 10', type: 'practice', points: 2.5, source: src('Pergunta 10', 3), theme: 'ordenacao', difficulty: 'media',
     constraints: [noLib, C.recursion('Tens de usar recursão.')],
-    statement: 'Escreve `merge :: [Int] -> [Int] -> [Int]`, que junta duas listas **já ordenadas** numa só lista ordenada, mantendo os valores repetidos.\nExemplos:\n```haskell\nmerge [1,3,5] [2,4,6] == [1,2,3,4,5,6]\nmerge [1,3] [1,2]     == [1,1,2,3]\n```',
-    func: 'merge', signature: 'merge :: [Int] -> [Int] -> [Int]',
+    statement: 'Escreve `ssort :: [Int] -> [Int]`, que ordena uma lista por ordem crescente com a **ordenação por seleção**: escolhe o menor elemento, coloca-o à cabeça e ordena recursivamente o que sobra. Atenção: deves retirar **apenas uma** ocorrência do menor, para os valores repetidos se manterem.\nExemplos:\n```haskell\nssort [3,1,2] == [1,2,3]\nssort [2,1,2] == [1,2,2]\n```',
+    func: 'ssort', signature: 'ssort :: [Int] -> [Int]',
     tests: [
-      { call: 'merge [1,3,5] [2,4,6]', expect: '[1,2,3,4,5,6]', origin: 'enunciado' },
-      { call: 'merge [1,3] [1,2]', expect: '[1,1,2,3]', origin: 'enunciado' },
-      { call: 'merge [] [1,2]', expect: '[1,2]', origin: 'gerado' },
-      { call: 'merge [1,2] []', expect: '[1,2]', origin: 'gerado' },
-      { call: 'merge [5] [1,2,3]', expect: '[1,2,3,5]', origin: 'gerado' },
-      { call: 'merge [] []', expect: '[]', origin: 'gerado' },
+      { call: 'ssort [3,1,2]', expect: '[1,2,3]', origin: 'enunciado' },
+      { call: 'ssort [2,1,2]', expect: '[1,2,2]', origin: 'enunciado' },
+      { call: 'ssort []', expect: '[]', origin: 'gerado' },
+      { call: 'ssort [4]', expect: '[4]', origin: 'gerado' },
+      { call: 'ssort [5,4,3,2,1]', expect: '[1,2,3,4,5]', origin: 'gerado' },
+      { call: 'ssort [1,1,1]', expect: '[1,1,1]', origin: 'gerado' },
+      { call: 'ssort [0,-2,-2,7]', expect: '[-2,-2,0,7]', origin: 'gerado' },
     ],
-    refs: [{ status: 'unofficial', origin: 'gerada', code: r`merge :: [Int] -> [Int] -> [Int]
-merge [] ys = ys
-merge xs [] = xs
-merge (x : xs) (y : ys)
-  | x <= y = x : merge xs (y : ys)
-  | otherwise = y : merge (x : xs) ys` }],
+    refs: [{ status: 'unofficial', origin: 'gerada', code: r`ssort :: [Int] -> [Int]
+ssort [] = []
+ssort xs = m : ssort (tira m xs)
+  where
+    m = minimum xs
+    tira _ [] = []
+    tira y (z : zs)
+      | y == z = zs
+      | otherwise = z : tira y zs` }],
   },
   {
     id: 'miniA-B06', n: 'Pergunta 11', type: 'practice', points: 3, source: src('Pergunta 11', 4), theme: 'grafos', difficulty: 'dificil',

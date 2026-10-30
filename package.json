@@ -11,7 +11,8 @@
     "check:transcription": "node scripts/check-transcription.mjs",
     "test": "node --test test/*.test.mjs",
     "test:private": "node --test test/private/*.test.mjs",
-    "start": "node scripts/build-bank.mjs && node server/index.mjs"
+    "start": "node scripts/build-bank.mjs && node server/index.mjs",
+    "check:originality": "node scripts/check-originality.mjs"
   },
   "engines": {
     "node": ">=20"

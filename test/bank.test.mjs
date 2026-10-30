@@ -68,3 +68,41 @@ test('sem material de terceiros: nenhuma imagem, tipo de letra, PDF ou URL exter
     assert.doesNotMatch(txt, /@import|url\(\s*["']?https?:/, `${f} importa CSS externo`);
   }
 });
+
+test('banco de demonstração (V2): ~52 questões, 14 temas, 4 exames de 20 valores, ~45% teoria e dificuldade ~40/40/20', () => {
+  const n = bank.questions.length;
+  const th = bank.questions.filter((q) => q.type === 'theory').length;
+  assert.ok(n >= 48 && n <= 56, `${n} questões`);
+  assert.ok(th / n >= 0.40 && th / n <= 0.50, `teoria: ${(100 * th / n).toFixed(0)}%`);
+  const share = (d) => bank.questions.filter((q) => q.difficulty === d).length / n;
+  assert.ok(share('facil') >= 0.35 && share('facil') <= 0.45, `fácil ${(100 * share('facil')).toFixed(0)}%`);
+  assert.ok(share('media') >= 0.35 && share('media') <= 0.45, `média ${(100 * share('media')).toFixed(0)}%`);
+  assert.ok(share('dificil') >= 0.15 && share('dificil') <= 0.25, `difícil ${(100 * share('dificil')).toFixed(0)}%`);
+  const themes = Object.keys(bank.themes);
+  assert.equal(themes.length, 14);
+  for (const t of themes) assert.ok(bank.questions.filter((q) => q.theme === t).length >= 2, `o tema "${t}" tem menos de 2 questões`);
+  assert.deepEqual(bank.exams.map((e) => e.id), ['demo-a', 'demo-b', 'mini-a', 'mini-b']);
+  for (const e of bank.exams) {
+    assert.equal(e.totalPoints, 20, e.id);
+    const qs = bank.questions.filter((q) => q.exam === e.id);
+    assert.ok(qs.some((q) => q.type === 'theory') && qs.some((q) => q.type === 'practice'), e.id);
+    assert.ok(qs.length >= 12 && qs.length <= 14, `${e.id}: ${qs.length} questões`);
+  }
+});
+
+test('qualidade das questões: sem repetições, teoria com 4 opções, prática com testes normais e casos-limite', () => {
+  const norm = (x) => x.toLowerCase().replace(/\s+/g, ' ');
+  assert.equal(new Set(bank.questions.map((q) => norm(q.statement))).size, bank.questions.length, 'enunciados repetidos');
+  const funcs = bank.questions.filter((q) => q.func).map((q) => q.func);
+  assert.equal(new Set(funcs).size, funcs.length, 'a mesma função pedida duas vezes');
+  for (const q of bank.questions) {
+    if (q.type === 'theory') {
+      assert.equal(q.options.length, 4, q.id);
+      assert.ok(q.answer.status === 'confirmed' ? q.verify?.length : true, `${q.id}: resposta confirmada sem verificação`);
+    } else {
+      assert.ok(q.tests.length >= 2, q.id);
+      assert.ok(q.tests.some((t) => t.origin === 'enunciado') && q.tests.filter((t) => t.origin === 'gerado').length >= 1, `${q.id}: faltam exemplos do enunciado ou casos gerados`);
+      assert.ok(q.refs.length >= 1 && q.constraints.length >= 1, q.id);
+    }
+  }
+});

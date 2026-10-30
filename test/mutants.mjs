@@ -108,9 +108,9 @@ export const MUTANTS = {
     { label: 'correto mas sem foldr (técnica obrigatória)', code: 'myReverse :: [a] -> [a]\nmyReverse [] = []\nmyReverse (x : xs) = myReverse xs ++ [x]\n', violates: 'require-idents' },
   ],
   'miniA-B05': [
-    { label: 'concatena sem ordenar', code: 'merge :: [Int] -> [Int] -> [Int]\nmerge xs ys = xs ++ ys\n' },
-    { label: 'descarta os repetidos', code: 'merge :: [Int] -> [Int] -> [Int]\nmerge [] ys = ys\nmerge xs [] = xs\nmerge (x : xs) (y : ys)\n  | x == y = x : merge xs ys\n  | x < y = x : merge xs (y : ys)\n  | otherwise = y : merge (x : xs) ys\n' },
-    { label: 'perde o resto quando uma lista acaba', code: 'merge :: [Int] -> [Int] -> [Int]\nmerge [] ys = ys\nmerge _ [] = []\nmerge (x : xs) (y : ys)\n  | x <= y = x : merge xs (y : ys)\n  | otherwise = y : merge (x : xs) ys\n' },
+    { label: 'retira todas as ocorrências do menor (perde repetidos)', code: 'ssort :: [Int] -> [Int]\nssort [] = []\nssort xs = m : ssort [x | x <- xs, x /= m]\n  where m = minimum xs\n' },
+    { label: 'seleciona o maior (ordem decrescente)', code: 'ssort :: [Int] -> [Int]\nssort [] = []\nssort xs = m : ssort (tira m xs)\n  where\n    m = maximum xs\n    tira _ [] = []\n    tira y (z : zs)\n      | y == z = zs\n      | otherwise = z : tira y zs\n' },
+    { label: 'só coloca o menor à cabeça (resto por ordenar)', code: 'ssort :: [Int] -> [Int]\nssort [] = []\nssort xs = m : tira m xs\n  where\n    m = minimum xs\n    tira _ [] = []\n    tira y (z : zs)\n      | y == z = zs\n      | otherwise = z : tira y zs\n' },
   ],
   'miniA-B06': [
     { label: 'só vizinhos diretos', code: 'reachable :: [(Int, Int)] -> Int -> Int -> Bool\nreachable es a b = a == b || b §elem§ ([y | (x, y) <- es, x == a] ++ [x | (x, y) <- es, y == a])\n' },
@@ -121,5 +121,37 @@ export const MUTANTS = {
     { label: 'chaves por ordem inversa', code: 'groupByKey :: [(String, Int)] -> [(String, [Int])]\ngroupByKey [] = []\ngroupByKey ((k, v) : resto) =\n  groupByKey [(k\', w) | (k\', w) <- resto, k\' /= k] ++ [(k, v : [w | (k\', w) <- resto, k\' == k])]\n' },
     { label: 'valores por ordem inversa', code: 'groupByKey :: [(String, Int)] -> [(String, [Int])]\ngroupByKey [] = []\ngroupByKey ((k, v) : resto) =\n  (k, reverse (v : [w | (k\', w) <- resto, k\' == k])) : groupByKey [(k\', w) | (k\', w) <- resto, k\' /= k]\n' },
     { label: 'um grupo por par (não agrupa)', code: 'groupByKey :: [(String, Int)] -> [(String, [Int])]\ngroupByKey = map (\\(k, v) -> (k, [v]))\n' },
+  ],
+  'miniB-B01': [
+    { label: 'multiplica em vez de elevar', code: 'power :: Int -> Int -> Int\npower x n = x * n\n' },
+    { label: 'caso base devolve 0', code: 'power :: Int -> Int -> Int\npower _ 0 = 0\npower x n = x * power x (n - 1)\n' },
+    { label: 'um expoente a menos', code: 'power :: Int -> Int -> Int\npower x n\n  | n == 0 = 1\n  | n == 1 = 1\n  | otherwise = x * power x (n - 1)\n' },
+  ],
+  'miniB-B02': [
+    { label: 'não faz nada', code: 'mirror :: Tree a -> Tree a\nmirror t = t\n' },
+    { label: 'só troca na raiz', code: 'mirror :: Tree a -> Tree a\nmirror Leaf = Leaf\nmirror (Node l v r) = Node r v l\n' },
+    { label: 'só espelha o ramo direito', code: 'mirror :: Tree a -> Tree a\nmirror Leaf = Leaf\nmirror (Node l v r) = Node (mirror r) v l\n' },
+  ],
+  'miniB-B03': [
+    { label: 'perde os valores repetidos', code: 'qsort :: [Int] -> [Int]\nqsort [] = []\nqsort (p : xs) = qsort [x | x <- xs, x < p] ++ [p] ++ qsort [x | x <- xs, x > p]\n' },
+    { label: 'ordem decrescente', code: 'qsort :: [Int] -> [Int]\nqsort [] = []\nqsort (p : xs) = qsort [x | x <- xs, x >= p] ++ [p] ++ qsort [x | x <- xs, x < p]\n' },
+    { label: 'só uma partição (sem recursão)', code: 'qsort :: [Int] -> [Int]\nqsort [] = []\nqsort (p : xs) = [x | x <- xs, x < p] ++ [p] ++ [x | x <- xs, x >= p]\n' },
+    { label: 'correto mas sem comprehension', code: 'qsort :: [Int] -> [Int]\nqsort [] = []\nqsort (p : xs) = qsort (filter (< p) xs) ++ [p] ++ qsort (filter (>= p) xs)\n', violates: 'require-comprehension' },
+  ],
+  'miniB-B04': [
+    { label: 'só verifica a diagonal', code: 'isIdentity :: Matriz -> Bool\nisIdentity m = and [linha !! i == 1 | (i, linha) <- zip [0 ..] m]\n' },
+    { label: 'só verifica os zeros fora da diagonal', code: 'isIdentity :: Matriz -> Bool\nisIdentity m = and [x == 0 | (i, linha) <- zip [0 ..] m, (j, x) <- zip [0 ..] linha, i /= j]\n' },
+    { label: 'só verifica a primeira linha', code: 'isIdentity :: Matriz -> Bool\nisIdentity [] = True\nisIdentity (l : _) = head l == 1 && all (== 0) (tail l)\n' },
+    { label: 'aceita qualquer matriz escalar', code: 'isIdentity :: Matriz -> Bool\nisIdentity m = and [x == (if i == j then head (head m) else 0) | (i, linha) <- zip [0 ..] m, (j, x) <- zip [0 ..] linha]\n' },
+  ],
+  'miniB-B05': [
+    { label: 'instável (inverte a ordem dos empates)', code: 'sortByKey :: Ord b => (a -> b) -> [a] -> [a]\nsortByKey _ [] = []\nsortByKey f (x : xs) = insere (sortByKey f xs)\n  where\n    insere [] = [x]\n    insere (y : ys)\n      | f x < f y = x : y : ys\n      | otherwise = y : insere ys\n' },
+    { label: 'ordena pelo elemento e não pela chave', code: 'sortByKey :: Ord a => (a -> b) -> [a] -> [a]\nsortByKey _ [] = []\nsortByKey f (x : xs) = insere (sortByKey f xs)\n  where\n    insere [] = [x]\n    insere (y : ys)\n      | x <= y = x : y : ys\n      | otherwise = y : insere ys\n' },
+    { label: 'ordem decrescente da chave', code: 'sortByKey :: Ord b => (a -> b) -> [a] -> [a]\nsortByKey _ [] = []\nsortByKey f (x : xs) = insere (sortByKey f xs)\n  where\n    insere [] = [x]\n    insere (y : ys)\n      | f x >= f y = x : y : ys\n      | otherwise = y : insere ys\n' },
+  ],
+  'miniB-B06': [
+    { label: 'sem espaços à esquerda', code: 'pyramid :: Int -> IO ()\npyramid n = mapM_ (\\i -> putStrLn (replicate (2 * i - 1) \'*\')) [1 .. n]\n' },
+    { label: 'espaços no fim da linha', code: 'pyramid :: Int -> IO ()\npyramid n = mapM_ (\\i -> putStrLn (replicate (2 * i - 1) \'*\' ++ replicate (n - i) \' \')) [1 .. n]\n' },
+    { label: 'asteriscos a mais (2i em vez de 2i-1)', code: 'pyramid :: Int -> IO ()\npyramid n = mapM_ (\\i -> putStrLn (replicate (n - i) \' \' ++ replicate (2 * i) \'*\')) [1 .. n]\n' },
   ],
 };

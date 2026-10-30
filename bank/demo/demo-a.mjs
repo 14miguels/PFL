@@ -228,10 +228,7 @@ isort (x:xs) = insere x (isort xs)
     refs: [{ status: 'unofficial', origin: 'gerada', code: r`mulM :: Matriz -> Matriz -> Matriz
 mulM a b = [[sum (zipWith (*) linha coluna) | coluna <- colunas] | linha <- a]
   where
-    colunas = transposta b
-    transposta [] = []
-    transposta ([]:_) = []
-    transposta m = map head m : transposta (map tail m)` }],
+    colunas = foldr (zipWith (:)) (repeat []) b` }],
   },
 ];
 
