@@ -86,4 +86,40 @@ export const MUTANTS = {
     { label: 'escolhe a menor soma', code: 'topStudent :: [(String, [Int])] -> Maybe String\ntopStudent [] = Nothing\ntopStudent (x : xs) = Just (fst (go x xs))\n  where\n    soma (_, notas) = sum notas\n    go melhor [] = melhor\n    go melhor (y : ys)\n      | soma y < soma melhor = go y ys\n      | otherwise = go melhor ys\n' },
     { label: 'devolve sempre o primeiro aluno', code: 'topStudent :: [(String, [Int])] -> Maybe String\ntopStudent [] = Nothing\ntopStudent ((n, _) : _) = Just n\n' },
   ],
+  'miniA-B01': [
+    { label: 'conta os algarismos', code: 'digitSum :: Int -> Int\ndigitSum n\n  | n < 10 = 1\n  | otherwise = 1 + digitSum (n §div§ 10)\n' },
+    { label: 'só o último algarismo', code: 'digitSum :: Int -> Int\ndigitSum n = n §mod§ 10\n' },
+    { label: 'perde o primeiro algarismo', code: 'digitSum :: Int -> Int\ndigitSum n\n  | n < 10 = 0\n  | otherwise = n §mod§ 10 + digitSum (n §div§ 10)\n' },
+  ],
+  'miniA-B02': [
+    { label: 'conta os nós em vez da altura', code: 'height :: Tree a -> Int\nheight Leaf = 0\nheight (Node l _ r) = 1 + height l + height r\n' },
+    { label: 'só segue o ramo esquerdo', code: 'height :: Tree a -> Int\nheight Leaf = 0\nheight (Node l _ _) = 1 + height l\n' },
+    { label: 'folha com altura 1', code: 'height :: Tree a -> Int\nheight Leaf = 1\nheight (Node l _ r) = 1 + max (height l) (height r)\n' },
+  ],
+  'miniA-B03': [
+    { label: 'caso base devolve 1', code: 'collatz :: Int -> Int\ncollatz 1 = 1\ncollatz n\n  | even n = 1 + collatz (n §div§ 2)\n  | otherwise = 1 + collatz (3 * n + 1)\n' },
+    { label: 'regra dos ímpares errada (n - 1)', code: 'collatz :: Int -> Int\ncollatz 1 = 0\ncollatz n\n  | even n = 1 + collatz (n §div§ 2)\n  | otherwise = 1 + collatz (n - 1)\n' },
+    { label: 'só conta os passos pares', code: 'collatz :: Int -> Int\ncollatz 1 = 0\ncollatz n\n  | even n = 1 + collatz (n §div§ 2)\n  | otherwise = collatz (3 * n + 1)\n' },
+  ],
+  'miniA-B04': [
+    { label: 'copia a lista em vez de a inverter', code: 'myReverse :: [a] -> [a]\nmyReverse = foldr (:) []\n' },
+    { label: 'perde o primeiro elemento', code: 'myReverse :: [a] -> [a]\nmyReverse xs = foldr (\\x acc -> acc ++ [x]) [] (drop 1 xs)\n' },
+    { label: 'correto mas usa reverse (técnica proibida)', code: 'myReverse :: [a] -> [a]\nmyReverse = reverse\n', violates: 'forbid-idents' },
+    { label: 'correto mas sem foldr (técnica obrigatória)', code: 'myReverse :: [a] -> [a]\nmyReverse [] = []\nmyReverse (x : xs) = myReverse xs ++ [x]\n', violates: 'require-idents' },
+  ],
+  'miniA-B05': [
+    { label: 'concatena sem ordenar', code: 'merge :: [Int] -> [Int] -> [Int]\nmerge xs ys = xs ++ ys\n' },
+    { label: 'descarta os repetidos', code: 'merge :: [Int] -> [Int] -> [Int]\nmerge [] ys = ys\nmerge xs [] = xs\nmerge (x : xs) (y : ys)\n  | x == y = x : merge xs ys\n  | x < y = x : merge xs (y : ys)\n  | otherwise = y : merge (x : xs) ys\n' },
+    { label: 'perde o resto quando uma lista acaba', code: 'merge :: [Int] -> [Int] -> [Int]\nmerge [] ys = ys\nmerge _ [] = []\nmerge (x : xs) (y : ys)\n  | x <= y = x : merge xs (y : ys)\n  | otherwise = y : merge (x : xs) ys\n' },
+  ],
+  'miniA-B06': [
+    { label: 'só vizinhos diretos', code: 'reachable :: [(Int, Int)] -> Int -> Int -> Bool\nreachable es a b = a == b || b §elem§ ([y | (x, y) <- es, x == a] ++ [x | (x, y) <- es, y == a])\n' },
+    { label: 'ignora arestas no sentido inverso', code: 'reachable :: [(Int, Int)] -> Int -> Int -> Bool\nreachable es a b = go [a] []\n  where\n    go [] _ = False\n    go (v : pend) vis\n      | v == b = True\n      | v §elem§ vis = go pend vis\n      | otherwise = go ([y | (x, y) <- es, x == v] ++ pend) (v : vis)\n' },
+    { label: 'só caminhos de comprimento ≤ 2', code: 'reachable :: [(Int, Int)] -> Int -> Int -> Bool\nreachable es a b = a == b || b §elem§ n a || any (\\x -> b §elem§ n x) (n a)\n  where n v = [y | (x, y) <- es, x == v] ++ [x | (x, y) <- es, y == v]\n' },
+  ],
+  'miniA-B07': [
+    { label: 'chaves por ordem inversa', code: 'groupByKey :: [(String, Int)] -> [(String, [Int])]\ngroupByKey [] = []\ngroupByKey ((k, v) : resto) =\n  groupByKey [(k\', w) | (k\', w) <- resto, k\' /= k] ++ [(k, v : [w | (k\', w) <- resto, k\' == k])]\n' },
+    { label: 'valores por ordem inversa', code: 'groupByKey :: [(String, Int)] -> [(String, [Int])]\ngroupByKey [] = []\ngroupByKey ((k, v) : resto) =\n  (k, reverse (v : [w | (k\', w) <- resto, k\' == k])) : groupByKey [(k\', w) | (k\', w) <- resto, k\' /= k]\n' },
+    { label: 'um grupo por par (não agrupa)', code: 'groupByKey :: [(String, Int)] -> [(String, [Int])]\ngroupByKey = map (\\(k, v) -> (k, [v]))\n' },
+  ],
 };

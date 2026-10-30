@@ -15,7 +15,7 @@ test('themeStats e weakestTheme: menor taxa de acerto, só com erradas', () => {
   ]);
   const rows = themeStats(bank, stats);
   const get = (t) => rows.find((r) => r.t === t);
-  assert.deepEqual([get('avaliacao').right, get('avaliacao').wrongN, get('avaliacao').todo], [1, 1, 0]);
+  assert.deepEqual([get('avaliacao').right, get('avaliacao').wrongN, get('avaliacao').todo], [1, 1, get('avaliacao').total - 2]);
   assert.deepEqual(get('tipos').wrongIds, []);
   assert.deepEqual(get('lazy').wrongIds, ['demoA-A03']);
   assert.equal(weakestTheme(rows).t, 'lazy', '0% de acerto é o pior');
