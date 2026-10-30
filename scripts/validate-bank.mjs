@@ -56,6 +56,8 @@ async function checkTheory(q) {
       const got = norm(r.stdout);
       const want = norm(v.expect ?? q.options[ansIdx]);
       if (got !== want) msgs.push(`${q.id}: eval "${v.expr}" → ${got || r.stderr.slice(0, 200)} ≠ ${want}`);
+      // banco de demonstração: nenhum distrator pode ser igual ao resultado (resposta ambígua)
+      if (bank.demo && ansIdx >= 0) q.options.forEach((o, i) => { if (i !== ansIdx && norm(o) === want) msgs.push(`${q.id}: a opção ${letters[i]} também é igual ao resultado (distrator ambíguo)`); });
     } else if (v.kind === 'typecheck') {
       const okSet = [];
       for (const [i, opt] of q.options.entries()) if (await ghcCompiles(`${v.prelude ?? ''}\n${v.template.replace('$OPT', opt)}\n`)) okSet.push(letters[i]);
@@ -67,7 +69,10 @@ async function checkTheory(q) {
       if (canonType(t) !== canonType(v.expect)) msgs.push(`${q.id}: tipo inferido "${t}" ≠ "${v.expect}"`);
       if (v.noneOfOthers) {
         q.options.forEach((o, i) => { if (i !== ansIdx && canonType(o) === canonType(t)) msgs.push(`${q.id}: a opção ${letters[i]} coincide com o tipo inferido, mas a resposta é "nenhuma"`); });
-      } else if (canonType(q.options[ansIdx]) !== canonType(v.expect)) msgs.push(`${q.id}: a opção correta "${q.options[ansIdx]}" não coincide com o tipo verificado "${v.expect}"`);
+      } else {
+        if (canonType(q.options[ansIdx]) !== canonType(v.expect)) msgs.push(`${q.id}: a opção correta "${q.options[ansIdx]}" não coincide com o tipo verificado "${v.expect}"`);
+        if (bank.demo) q.options.forEach((o, i) => { if (i !== ansIdx && canonType(o) === canonType(v.expect)) msgs.push(`${q.id}: a opção ${letters[i]} também é o tipo inferido (distrator ambíguo)`); });
+      }
     } else if (v.kind === 'equiv') {
       const okSet = [];
       for (const [i, opt] of q.options.entries()) if (await equivRun({ name: v.name, sig: v.sig, original: v.original, def: opt, inputs: v.inputs })) okSet.push(letters[i]);

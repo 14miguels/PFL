@@ -8,6 +8,9 @@ import { launch, hasChrome } from './cdp.mjs';
 import { bank, bankFile, byId } from './helpers.mjs';
 
 const SHOTS = process.env.SHOTS_DIR ?? mkdtempSync(path.join(tmpdir(), 'pfl-shots-'));
+const demoA = bank.questions.filter((q) => q.exam === 'demo-a');
+const nTheoryA = demoA.filter((q) => q.type === 'theory').length;
+const pt = (x) => String(x).replace('.', ','); // formato pt-PT dos números
 let app; let base; let b;
 const skip = !hasChrome && 'Chrome não encontrado (ou Node < 22, ou PFL_SKIP_E2E definido)';
 
@@ -87,12 +90,12 @@ test('exame original (demo A): ecrã inicial, teoria, prática, entrega e revis�
   // não revela respostas
   assert.equal(await b.eval('document.querySelectorAll(".option.correct, .option.wrong").length'), 0);
   // responde às 6 teóricas (opção b em todas) e avança
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < nTheoryA; i++) {
     await b.eval('document.querySelectorAll(".option")[1].click()');
     await b.eval(`[...document.querySelectorAll('.footer-nav button')].pop().click()`);
   }
   await b.waitFor('document.querySelector("textarea.code")');
-  assert.match(await text(), /Questão 7 de 12/);
+  assert.match(await text(), new RegExp(`Questão ${nTheoryA + 1} de ${demoA.length}`));
   // prática 1 (sumSquares) com a solução de referência
   await b.setValue('textarea.code', byId('demoA-B01').refs[0].code);
   await b.clickText('button', 'Executar testes');
@@ -100,7 +103,7 @@ test('exame original (demo A): ecrã inicial, teoria, prática, entrega e revis�
   assert.match(await text(), /3\/3 testes passaram/);
   console.log('screens →', await b.screenshot(path.join(SHOTS, 'practice-run.png')));
   // prática 3 (evensDoubled) com uma solução que viola a técnica imposta
-  await b.eval(`document.querySelectorAll('.qchip')[8].click()`);
+  await b.eval(`document.querySelectorAll('.qchip')[${nTheoryA + 2}].click()`); // 3.ª prática: evensDoubled
   await b.waitFor('document.querySelector("textarea.code")');
   await b.setValue('textarea.code', 'evensDoubled :: [Int] -> [Int]\nevensDoubled xs = map (*2) (filter even xs)\n');
   await b.clickText('button', 'Executar testes');
@@ -140,7 +143,7 @@ test('histórico: tentativa guardada e repetição só das erradas', { skip }, a
   await b.waitFor('location.hash.startsWith("#/run/")');
   await b.waitFor('document.querySelector(".runner-head")');
   const n = await b.eval('document.querySelectorAll(".qchip").length');
-  assert.ok(n > 0 && n < 12, `repetição tem ${n} perguntas`);
+  assert.ok(n > 0 && n < demoA.length, `repetição tem ${n} perguntas`);
   assert.match(await b.eval('document.querySelector(".runner-head").innerText'), /Repetição/);
   noErrors();
 });
@@ -186,14 +189,15 @@ test('banco de questões: filtros e abertura sem revelar a resposta', { skip }, 
 test('exame aleatório: gera a estrutura do preset do banco e mostra o ecrã inicial', { skip }, async () => {
   await b.goto(`${base}/#/random`);
   await b.waitFor('document.querySelector("#preset")');
-  assert.deepEqual(await b.eval('[...document.querySelectorAll("#preset option")].map(o => o.value)'), ['demo', 'curto', 'custom']);
+  assert.deepEqual(await b.eval('[...document.querySelectorAll("#preset option")].map(o => o.value)'), [...Object.keys(bank.presets), 'custom']);
   await b.clickText('button', 'Gerar exame');
   await b.waitFor('location.hash.startsWith("#/run/")');
   await b.waitFor('document.querySelector("#view h1")');
   const t = await text();
   assert.match(t, /Exame aleatório/);
-  assert.match(t, /Cotações atingidas: teoria 2/);
-  assert.match(t, /prática 5/);
+  const first = Object.values(bank.presets)[0];
+  assert.match(t, new RegExp(`Cotações atingidas: teoria ${pt(first.theory)}`));
+  assert.match(t, new RegExp(`prática ${pt(first.practice)}`));
   await b.screenshot(path.join(SHOTS, 'random-start.png'));
   noErrors();
 });

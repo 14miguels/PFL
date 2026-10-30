@@ -8,11 +8,10 @@ import { bank, ctxOf } from './helpers.mjs';
 
 const root = new URL('..', import.meta.url);
 
-test('banco de demonstração: contagens e estados coerentes', () => {
-  const th = bank.questions.filter((q) => q.type === 'theory');
-  const pr = bank.questions.filter((q) => q.type === 'practice');
-  assert.deepEqual([bank.exams.length, th.length, pr.length], [2, 8, 8]);
-  assert.deepEqual(th.map((q) => q.answer.status).sort(), ['confirmed', 'confirmed', 'confirmed', 'confirmed', 'confirmed', 'confirmed', 'unknown', 'unofficial']);
+test('banco de demonstração: ids únicos, estados coerentes e só há uma resposta desconhecida e uma não oficial', () => {
+  assert.equal(new Set(bank.questions.map((q) => q.id)).size, bank.questions.length);
+  const st = (s) => bank.questions.filter((q) => q.type === 'theory' && q.answer.status === s).length;
+  assert.deepEqual([st('official'), st('unknown'), st('unofficial')], [0, 1, 1], 'nenhuma resposta "oficial" (não há exames reais) e uma de cada estado especial para demonstrar a interface');
 });
 
 test('todas as questões são de demonstração (nenhum exame real) e têm tema, dificuldade e origem dos testes', () => {
