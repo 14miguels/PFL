@@ -1,0 +1,19 @@
+{
+  "name": "pfl-prep",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Preparação para exames de PFL (Haskell): banco de questões, gerador de exames e corretor local.",
+  "scripts": {
+    "build": "node scripts/build-bank.mjs",
+    "validate": "node scripts/validate-bank.mjs",
+    "report": "node scripts/report-bank.mjs",
+    "check:transcription": "node scripts/check-transcription.mjs",
+    "test": "node --test test/*.test.mjs",
+    "test:private": "node --test test/private/*.test.mjs",
+    "start": "node scripts/build-bank.mjs && node server/index.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

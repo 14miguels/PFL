@@ -1,0 +1,21 @@
+# Dados pessoais e estado local (histórico, respostas, ficheiros de trabalho)
+data/
+
+# Dependências, segredos e lixo do sistema/editor
+node_modules/
+.env
+.env.*
+*.log
+*.tmp
+.DS_Store
+.vscode/
+.idea/
+
+# Banco privado com exames reais: NÃO publicar enquanto os direitos de redistribuição não estiverem esclarecidos
+bank/src/
+bank/ocr/
+bank/assets/
+bank/questions.json
+bank/REVIEW.md
+test/private/
+*.pdf

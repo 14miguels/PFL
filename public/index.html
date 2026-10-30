@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PFL Prep</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f46e5'/%3E%3Ctext x='16' y='22' font-size='18' text-anchor='middle' fill='white' font-family='serif'%3E%CE%BB%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/style.css">
+  <script>
+    // aplica o tema antes do primeiro desenho para evitar clarão
+    try { const t = localStorage.getItem('pfl-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch {}
+  </script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#/"><span class="logo">λ</span><span>PFL Prep</span></a>
+      <nav id="nav"></nav>
+      <div class="sidebar-foot">
+        <button class="btn ghost sm" id="theme-toggle" title="Alternar tema claro/escuro" aria-label="Alternar tema"></button>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><button class="btn ghost sm menu-btn" id="menu-btn" aria-label="Menu">☰</button><div id="topbar-slot"></div></header>
+      <div id="view" class="view" tabindex="-1"></div>
+    </main>
+  </div>
+  <div id="modal-root"></div>
+  <div id="toast-root" aria-live="polite"></div>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
