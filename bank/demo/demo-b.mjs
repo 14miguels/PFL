@@ -56,14 +56,14 @@ const questions = [
   },
   {
     id: 'demoB-A03', n: 'Pergunta 3', type: 'theory', points: 1, source: src('Pergunta 3'), theme: 'equiv', difficulty: 'media',
-    statement: 'Qual das definições seguintes de `g` é **equivalente** à original, para qualquer lista de inteiros?\n```haskell\ng :: [Int] -> [Int]\ng xs = reverse (map (+1) xs)\n```',
+    statement: 'Qual das definições seguintes de `g` é equivalente à original, para qualquer lista de inteiros?\n```haskell\ng :: [Int] -> [Int]\ng xs = reverse (map (+1) xs)\n```',
     options: ['g xs = reverse (filter (> 0) (map (+1) xs))', 'g xs = map (+1) (reverse xs)', 'g xs = map (+1) xs', 'g xs = reverse xs'],
     answer: { value: 'b', status: 'confirmed', basis: 'Verificada por execução em GHC: só a opção b dá sempre o mesmo resultado que a original (o `map` e o `reverse` comutam).' },
     verify: [{ kind: 'equiv', name: 'g', sig: 'g :: [Int] -> [Int]', original: 'g xs = reverse (map (+1) xs)', inputs: ['[]', '[1,2,3]', '[-5,0,2]'] }],
   },
   {
     id: 'demoB-A04', n: 'Pergunta 4', type: 'theory', points: 1, source: src('Pergunta 4'), theme: 'equiv', difficulty: 'dificil',
-    statement: 'Qual das definições seguintes de `h` é **equivalente** à original, para qualquer lista de inteiros?\n```haskell\nh :: [Int] -> [Int]\nh xs = [x * 2 | x <- xs, x > 0]\n```',
+    statement: 'Qual das definições seguintes de `h` é equivalente à original, para qualquer lista de inteiros?\n```haskell\nh :: [Int] -> [Int]\nh xs = [x * 2 | x <- xs, x > 0]\n```',
     options: ['h xs = map (* 2) (filter (>= 0) xs)', 'h xs = filter (> 0) (map (* 2) xs)', 'h xs = reverse (map (* 2) (filter (> 0) xs))', 'h xs = map (* 2) (filter even xs)'],
     answer: { value: 'b', status: 'confirmed', basis: 'Verificada por execução em GHC: dobrar não muda o sinal, por isso filtrar antes ou depois é igual; a opção a deixa passar o 0 e a c inverte a ordem.' },
     verify: [{ kind: 'equiv', name: 'h', sig: 'h :: [Int] -> [Int]', original: 'h xs = [x * 2 | x <- xs, x > 0]', inputs: ['[]', '[1,-2,3,0]', '[0]', '[2,4]'] }],
@@ -115,7 +115,7 @@ neighbors es v = [b | (a, b) <- es, a == v] ++ [a | (a, b) <- es, b == v]` }],
   {
     id: 'demoB-B03', n: 'Pergunta 9', type: 'practice', points: 1, source: src('Pergunta 9', 2), theme: 'modelacao', difficulty: 'facil',
     constraints: [noLib, C.forbid(['lookup'], 'Não uses "lookup": implementa tu a pesquisa.')],
-    statement: 'Uma pauta é uma lista de pares `(nome, nota)`. Escreve `findScore :: String -> [(String, Int)] -> Maybe Int`, que devolve a nota do **primeiro** aluno com esse nome, ou `Nothing` se não existir.\nExemplos:\n```haskell\nfindScore "ana" [("rui",12),("ana",17)] == Just 17\nfindScore "eva" []                      == Nothing\n```',
+    statement: 'Uma pauta é uma lista de pares `(nome, nota)`. Escreve `findScore :: String -> [(String, Int)] -> Maybe Int`, que devolve a nota do primeiro aluno com esse nome, ou `Nothing` se não existir.\nExemplos:\n```haskell\nfindScore "ana" [("rui",12),("ana",17)] == Just 17\nfindScore "eva" []                      == Nothing\n```',
     func: 'findScore', signature: 'findScore :: String -> [(String, Int)] -> Maybe Int',
     tests: [
       { call: 'findScore "ana" [("rui",12),("ana",17)]', expect: 'Just 17', origin: 'enunciado' },
@@ -152,7 +152,7 @@ eval (Neg e) = negate (eval e)` }],
   {
     id: 'demoB-B05', n: 'Pergunta 11', type: 'practice', points: 2, source: src('Pergunta 11', 3), theme: 'lazy', difficulty: 'media',
     constraints: [noLib],
-    statement: 'Define a lista **infinita** `triangulares :: [Int]` dos números triangulares: 1, 3, 6, 10, 15, … (o n-ésimo é 1 + 2 + … + n). Os testes só usam partes finitas, por isso a tua lista tem de ser verdadeiramente infinita (preguiçosa).\nExemplo:\n```haskell\ntake 6 triangulares == [1,3,6,10,15,21]\n```',
+    statement: 'Define a lista infinita `triangulares :: [Int]` dos números triangulares: 1, 3, 6, 10, 15, … (o n-ésimo é 1 + 2 + … + n). Os testes só usam partes finitas, por isso a tua lista tem de ser verdadeiramente infinita (preguiçosa).\nExemplo:\n```haskell\ntake 6 triangulares == [1,3,6,10,15,21]\n```',
     func: 'triangulares', signature: 'triangulares :: [Int]',
     tests: [
       { call: 'take 6 triangulares', expect: '[1,3,6,10,15,21]', origin: 'enunciado' },
@@ -198,7 +198,7 @@ diag m = [linha !! i | (i, linha) <- zip [0 ..] m]` }],
   {
     id: 'demoB-B08', n: 'Pergunta 14', type: 'practice', points: 2.5, source: src('Pergunta 14', 4), theme: 'modelacao', difficulty: 'media',
     constraints: [noLib],
-    statement: 'Cada aluno tem um nome e a lista das suas notas: `[(String, [Int])]`. Escreve `topStudent :: [(String, [Int])] -> Maybe String`, que devolve o nome do aluno com a **maior soma** de notas. Em caso de empate, devolve o que aparece primeiro; para a lista vazia, devolve `Nothing`.\nExemplo:\n```haskell\ntopStudent [("ana",[10,12]),("rui",[15,9]),("eva",[8])] == Just "rui"\n```',
+    statement: 'Cada aluno tem um nome e a lista das suas notas: `[(String, [Int])]`. Escreve `topStudent :: [(String, [Int])] -> Maybe String`, que devolve o nome do aluno com a maior soma de notas. Em caso de empate, devolve o que aparece primeiro; para a lista vazia, devolve `Nothing`.\nExemplo:\n```haskell\ntopStudent [("ana",[10,12]),("rui",[15,9]),("eva",[8])] == Just "rui"\n```',
     func: 'topStudent', signature: 'topStudent :: [(String, [Int])] -> Maybe String',
     tests: [
       { call: 'topStudent [("ana",[10,12]),("rui",[15,9]),("eva",[8])]', expect: 'Just "rui"', origin: 'enunciado' },

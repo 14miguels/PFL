@@ -193,7 +193,7 @@ inorder (Node l v r) = inorder l ++ [v] ++ inorder r` }],
   {
     id: 'demoA-B07', n: 'Pergunta 13', type: 'practice', points: 2, source: src('Pergunta 13', 4), theme: 'ordenacao', difficulty: 'media',
     constraints: [noLib, C.recursion('Tens de usar recursão.')],
-    statement: 'Escreve `isort :: [Int] -> [Int]`, que ordena uma lista por ordem crescente com a **ordenação por inserção**: cada elemento é inserido, no sítio certo, numa lista já ordenada. Os valores repetidos mantêm-se.\nExemplos:\n```haskell\nisort [3,1,2] == [1,2,3]\nisort [2,2,1] == [1,2,2]\n```',
+    statement: 'Escreve `isort :: [Int] -> [Int]`, que ordena uma lista por ordem crescente com a ordenação por inserção: cada elemento é inserido, no sítio certo, numa lista já ordenada. Os valores repetidos mantêm-se.\nExemplos:\n```haskell\nisort [3,1,2] == [1,2,3]\nisort [2,2,1] == [1,2,2]\n```',
     func: 'isort', signature: 'isort :: [Int] -> [Int]',
     tests: [
       { call: 'isort [3,1,2]', expect: '[1,2,3]', origin: 'enunciado' },

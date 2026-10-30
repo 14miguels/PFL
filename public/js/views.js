@@ -86,7 +86,7 @@ export function renderOriginal(root) {
       h('div', { class: 'row' }, h('span', { class: 'chip' }, `Teoria: ${th.length}${e.stats.theoryPoints != null ? ` · ${fmt(e.stats.theoryPoints)} val` : ''}`), h('span', { class: 'chip' }, `Prática: ${pr.length}${e.stats.practicePoints != null ? ` · ${fmt(e.stats.practicePoints)} val` : ''}`),
         e.stats.totalPoints == null ? h('span', { class: 'chip warn' }, 'Sem cotações') : null),
       h('div', { class: 'small muted' }, e.files.join(' · '), e.excluded?.prolog ? ` · Prolog excluído (${e.excluded.prolog.theory + e.excluded.prolog.practice} questões)` : ''),
-      unknown || unoff ? h('div', { class: 'small' }, unknown ? `${unknown} pergunta(s) sem solução conhecida; ` : '', unoff ? `${unoff} com chave não oficial (indicativa).` : '') : null,
+      unknown || unoff ? h('div', { class: 'small' }, `${[unknown ? `${unknown} pergunta(s) sem solução conhecida` : null, unoff ? `${unoff} com chave não oficial (indicativa)` : null].filter(Boolean).join('; ')}.`) : null,
       best.length ? h('div', { class: 'small muted' }, `Já feito ${best.length}×; última nota: ${best[0].hasPoints ? `${fmt(best[0].score)}/${fmt(best[0].max)}` : `${best[0].theory.correct + best[0].practice.correct} certas`}`) : null,
       h('details', null, h('summary', null, 'Notas sobre as fontes'), h('ul', { class: 'small' }, e.notes.map((n) => h('li', null, n)))),
       h('div', { class: 'row' },

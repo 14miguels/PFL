@@ -32,11 +32,11 @@ async function openSingle(qid) {
   return id;
 }
 const text = () => b.eval('document.getElementById("view").innerText');
-// Nós de texto visíveis fora de blocos de código (em Haskell, `null` é uma função legítima).
+// Nós de texto visíveis gerados pela app, fora de código e do conteúdo das questões (em Haskell, `null` e `undefined` são legítimos).
 const stray = () => b.eval(`(() => {
   const out = []; const w = document.createTreeWalker(document.getElementById('view'), NodeFilter.SHOW_TEXT);
   for (let n = w.nextNode(); n; n = w.nextNode()) {
-    if (n.parentElement.closest('pre, code, .mono, textarea')) continue;
+    if (n.parentElement.closest('pre, code, .mono, textarea, .statement, .option')) continue; // código e conteúdo das questões (ex.: a opção "Erro: undefined")
     if (/\\b(null|undefined|NaN)\\b|\\[object/.test(n.nodeValue)) out.push(n.nodeValue.trim());
   }
   return out;
@@ -323,4 +323,61 @@ test('treino misto: chips numerados em sequência e com aria-label', { skip }, a
   assert.deepEqual(labels, labels.map((_, i) => String(i + 1)), 'numeração 1..N sem saltos');
   assert.match(await b.eval('document.querySelector(".qchip").getAttribute("aria-label")'), /^Pergunta 1 \((Teoria|Prática)\), (por responder|respondida)/);
   assert.equal(await b.eval('document.querySelector(".qchip.current").getAttribute("aria-current")'), 'true');
+});
+
+// ---- os quatro exames de demonstração podem ser concluídos pela interface e classificados (referências = 20/20)
+async function completeExamViaUi(exam) {
+  await b.goto(`${base}/`); await b.waitFor('document.querySelector("#view h1")');
+  await b.eval(`(async () => { const { buildOriginal } = await import('/js/generator.js'); const { store } = await import('/js/store.js'); const { startAttempt } = await import('/js/views.js'); startAttempt(buildOriginal(store.bank, ${JSON.stringify(exam.id)})); })()`);
+  await b.waitFor('location.hash.startsWith("#/run/")'); await b.waitFor('[...document.querySelectorAll("button")].some(e => e.textContent.includes("Começar"))');
+  await b.clickText('button', 'Começar'); await b.waitFor('document.querySelector(".runner-head")');
+  const qs = bank.questions.filter((q) => q.exam === exam.id); // ordem do exame: teoria, depois prática
+  for (const [i, q] of qs.entries()) {
+    if (q.type === 'theory') {
+      await b.waitFor('document.querySelector(".option")');
+      await b.eval(`document.querySelectorAll(".option")[${Math.max(0, 'abcdefgh'.indexOf(q.answer.value ?? 'a'))}].click()`);
+    } else {
+      await b.waitFor('document.querySelector("textarea.code")');
+      await b.setValue('textarea.code', q.refs[0].code);
+    }
+    if (i < qs.length - 1) await b.eval(`[...document.querySelectorAll('.footer-nav button')].pop().click()`);
+  }
+  await b.clickText('.runner-head button', 'Entregar'); await b.waitFor('document.querySelector(".modal")');
+  await b.clickText('.modal .btn', 'Entregar');
+  await b.waitFor('location.hash.startsWith("#/review/")', 120000); await b.waitFor('document.querySelector(".score-big")', 30000);
+  return text();
+}
+for (const exam of bank.exams) {
+  test(`exame completo pela interface: "${exam.label}" fica com 20/20`, { skip, timeout: 240000 }, async () => {
+    const t = await completeExamViaUi(exam);
+    assert.match(t, /≈ 20 \/ 20/, t.slice(0, 200));
+    assert.match(t, /Prática \(estimativa\)/);
+    assert.deepEqual(await stray(), []);
+    noErrors();
+  });
+}
+
+test('sem GHC: faixa de aviso na interface, mensagem clara ao executar testes e recuperação', { skip, timeout: 120000 }, async () => {
+  const saved = process.env.PATH;
+  process.env.PATH = mkdtempSync(path.join(tmpdir(), 'pfl-nopath-'));
+  try {
+    await b.goto(`${base}/`); await b.eval('location.reload()'); await b.waitFor('document.querySelector("#banner .banner-item")');
+    assert.match(await b.eval('document.querySelector("#banner").innerText'), /GHC.*não foi encontrado/);
+    await openSingle('demoA-B01');
+    await b.setValue('textarea.code', bank.questions.find((q) => q.id === 'demoA-B01').refs[0].code);
+    await b.clickText('button', 'Executar testes');
+    await b.waitFor('document.querySelector(".notice.err")', 40000);
+    const msg = await b.eval('document.querySelector(".notice.err").innerText');
+    assert.match(msg, /GHC/); assert.doesNotMatch(msg, /ENOENT/);
+  } finally { process.env.PATH = saved; }
+  await b.clickText('#banner button', 'Verificar de novo');
+  await b.waitFor('!document.querySelector("#banner .banner-item")', 20000);
+});
+
+test('lista de exames: mostra os 4 exames e os avisos sobre respostas sem texto solto', { skip }, async () => {
+  await b.goto(`${base}/#/exam`); await b.waitFor(`document.querySelectorAll(".card h3").length === ${bank.exams.length}`);
+  const small = await b.eval('[...document.querySelectorAll(".card .small")].map(e => e.textContent.trim())');
+  assert.ok(small.includes('1 pergunta(s) sem solução conhecida.'), JSON.stringify(small));
+  assert.ok(small.includes('1 com chave não oficial (indicativa).'), JSON.stringify(small));
+  assert.ok(small.every((t) => !/[;,]\s*$/.test(t)), `texto com pontuação solta: ${JSON.stringify(small)}`);
 });

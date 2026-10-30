@@ -76,7 +76,7 @@ const questions = [
   },
   {
     id: 'miniB-A06', n: 'Pergunta 6', type: 'theory', points: 1, source: src('Pergunta 6'), theme: 'equiv', difficulty: 'dificil',
-    statement: 'Qual das definições seguintes de `f` é **equivalente** à original, para qualquer lista de inteiros?\n```haskell\nf :: [Int] -> [(Int, Int)]\nf xs = [(x, y) | x <- xs, y <- xs, x < y]\n```',
+    statement: 'Qual das definições seguintes de `f` é equivalente à original, para qualquer lista de inteiros?\n```haskell\nf :: [Int] -> [(Int, Int)]\nf xs = [(x, y) | x <- xs, y <- xs, x < y]\n```',
     options: ['f xs = [(x, y) | y <- xs, x <- xs, x < y]', 'f xs = [(x, y) | x <- xs, y <- xs, y > x]', 'f xs = [(x, y) | x <- xs, y <- xs, x /= y]', 'f xs = zip xs (tail xs)'],
     answer: { value: 'b', status: 'confirmed', basis: 'Verificada por execução em GHC: a opção a percorre os geradores por ordem diferente e produz os pares noutra ordem (visível em [3,1,2]).' },
     verify: [{ kind: 'equiv', name: 'f', sig: 'f :: [Int] -> [(Int, Int)]', original: 'f xs = [(x, y) | x <- xs, y <- xs, x < y]', inputs: ['[]', '[1,2,3]', '[3,1,2]', '[2,2]', '[1]'] }],
@@ -119,7 +119,7 @@ mirror (Node l v r) = Node (mirror r) v (mirror l)` }],
   {
     id: 'miniB-B03', n: 'Pergunta 9', type: 'practice', points: 2.5, source: src('Pergunta 9', 3), theme: 'ordenacao', difficulty: 'media',
     constraints: [noLib, C.comprehension('Tens de usar list comprehensions.')],
-    statement: 'Escreve `qsort :: [Int] -> [Int]`, que ordena uma lista por ordem crescente com o **quicksort**: usa o primeiro elemento como pivô e list comprehensions para as duas partições. Os valores repetidos mantêm-se.\nExemplos:\n```haskell\nqsort [3,1,2]   == [1,2,3]\nqsort [2,2,1,2] == [1,2,2,2]\n```',
+    statement: 'Escreve `qsort :: [Int] -> [Int]`, que ordena uma lista por ordem crescente com o quicksort: usa o primeiro elemento como pivô e list comprehensions para as duas partições. Os valores repetidos mantêm-se.\nExemplos:\n```haskell\nqsort [3,1,2]   == [1,2,3]\nqsort [2,2,1,2] == [1,2,2,2]\n```',
     func: 'qsort', signature: 'qsort :: [Int] -> [Int]',
     tests: [
       { call: 'qsort [3,1,2]', expect: '[1,2,3]', origin: 'enunciado' },
@@ -157,7 +157,7 @@ isIdentity m = and [x == esperado i j | (i, linha) <- zip [0 ..] m, (j, x) <- zi
   {
     id: 'miniB-B05', n: 'Pergunta 11', type: 'practice', points: 3, source: src('Pergunta 11', 4), theme: 'ordenacao', difficulty: 'dificil',
     constraints: [noLib, C.recursion('Tens de usar recursão.')],
-    statement: 'Escreve `sortByKey :: Ord b => (a -> b) -> [a] -> [a]`, que ordena uma lista por ordem crescente da **chave** calculada por uma função. A ordenação tem de ser **estável**: elementos com a mesma chave mantêm a ordem relativa original.\nExemplos:\n```haskell\nsortByKey length ["bb","a","cc","d"] == ["a","d","bb","cc"]\nsortByKey negate [3,1,2]             == [3,2,1]\n```',
+    statement: 'Escreve `sortByKey :: Ord b => (a -> b) -> [a] -> [a]`, que ordena uma lista por ordem crescente da chave calculada por uma função. A ordenação tem de ser estável: elementos com a mesma chave mantêm a ordem relativa original.\nExemplos:\n```haskell\nsortByKey length ["bb","a","cc","d"] == ["a","d","bb","cc"]\nsortByKey negate [3,1,2]             == [3,2,1]\n```',
     func: 'sortByKey', signature: 'sortByKey :: Ord b => (a -> b) -> [a] -> [a]',
     tests: [
       { call: 'sortByKey length ["bb","a","cc","d"]', expect: '["a","d","bb","cc"]', origin: 'enunciado' },
@@ -179,7 +179,7 @@ sortByKey f (x : xs) = insere (sortByKey f xs)
   {
     id: 'miniB-B06', n: 'Pergunta 12', type: 'practice', points: 3.5, source: src('Pergunta 12', 4), theme: 'io', difficulty: 'dificil',
     constraints: [noLib],
-    statement: 'Escreve `pyramid :: Int -> IO ()`, que imprime uma pirâmide de asteriscos com `n` linhas: a linha `i` (a contar de 1) tem `2i - 1` asteriscos, precedidos de `n - i` espaços, e **não** tem espaços no fim. Para `n = 0` não imprime nada.\nExemplo:\n```haskell\nghci> pyramid 3\n  *\n ***\n*****\n```',
+    statement: 'Escreve `pyramid :: Int -> IO ()`, que imprime uma pirâmide de asteriscos com `n` linhas: a linha `i` (a contar de 1) tem `2i - 1` asteriscos, precedidos de `n - i` espaços, e não tem espaços no fim. Para `n = 0` não imprime nada.\nExemplo:\n```haskell\nghci> pyramid 3\n  *\n ***\n*****\n```',
     func: 'pyramid', signature: 'pyramid :: Int -> IO ()',
     tests: [
       { io: 'pyramid 3', stdout: '  *\n ***\n*****\n', origin: 'enunciado' },

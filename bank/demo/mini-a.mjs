@@ -142,7 +142,7 @@ myReverse = foldr (\x acc -> acc ++ [x]) []` }],
   {
     id: 'miniA-B05', n: 'Pergunta 10', type: 'practice', points: 2.5, source: src('Pergunta 10', 3), theme: 'ordenacao', difficulty: 'media',
     constraints: [noLib, C.recursion('Tens de usar recursão.')],
-    statement: 'Escreve `ssort :: [Int] -> [Int]`, que ordena uma lista por ordem crescente com a **ordenação por seleção**: escolhe o menor elemento, coloca-o à cabeça e ordena recursivamente o que sobra. Atenção: deves retirar **apenas uma** ocorrência do menor, para os valores repetidos se manterem.\nExemplos:\n```haskell\nssort [3,1,2] == [1,2,3]\nssort [2,1,2] == [1,2,2]\n```',
+    statement: 'Escreve `ssort :: [Int] -> [Int]`, que ordena uma lista por ordem crescente com a ordenação por seleção: escolhe o menor elemento, coloca-o à cabeça e ordena recursivamente o que sobra. Atenção: deves retirar apenas uma ocorrência do menor, para os valores repetidos se manterem.\nExemplos:\n```haskell\nssort [3,1,2] == [1,2,3]\nssort [2,1,2] == [1,2,2]\n```',
     func: 'ssort', signature: 'ssort :: [Int] -> [Int]',
     tests: [
       { call: 'ssort [3,1,2]', expect: '[1,2,3]', origin: 'enunciado' },

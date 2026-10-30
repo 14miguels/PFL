@@ -106,3 +106,8 @@ test('qualidade das questões: sem repetições, teoria com 4 opções, prática
     }
   }
 });
+
+test('os enunciados usam só a formatação suportada pela interface (sem **negrito** nem outro markdown)', () => {
+  for (const q of bank.questions) for (const t of [q.statement, ...(q.options ?? [])]) assert.doesNotMatch(t.replace(/```[\s\S]*?```/g, ''), /\*\*|__|^#{1,6}\s/m, `${q.id}: markdown não suportado`);
+  for (const c of bank.contexts) assert.doesNotMatch(`${c.text ?? ''}${c.note ?? ''}`, /\*\*/, `${c.id}: markdown não suportado`);
+});
