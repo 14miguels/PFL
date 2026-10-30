@@ -1,6 +1,7 @@
 // Blocos de apresentação de uma questão, partilhados pelo corredor de exame, pela revisão e pelo banco.
 import { h, rich, TYPE_LABEL, DIFF_LABEL, answerBadge, fmt } from './util.js';
 import { store } from './store.js';
+import { ghcLocations, hintsFor } from './hints.js';
 
 const FLAG_TEXT = { 'fonte-inconsistente': 'Enunciado inconsistente', 'fonte-com-erro': 'Erro no enunciado original' };
 
@@ -96,9 +97,20 @@ export function testTable(results) {
 }
 const shorten = (s) => (s ?? '').length > 300 ? `${s.slice(0, 300)}…` : (s ?? '');
 
-export function runSummary(run) {
+/** Erro de compilação: dicas para os erros comuns, links para as linhas (se `onGoto`) e a mensagem do GHC. */
+export function compileErrorBlock(message, { onGoto = null } = {}) {
+  const hints = hintsFor(message);
+  const locs = onGoto ? ghcLocations(message) : [];
+  return h('div', { class: 'notice err stack' },
+    h('strong', null, 'Erro de compilação'),
+    hints.length ? h('ul', { class: 'hints small' }, hints.map((t) => h('li', null, h('strong', null, 'Dica: '), t))) : null,
+    locs.length ? h('div', { class: 'row small' }, 'Ir para a linha:', locs.slice(0, 6).map((l) => h('button', { class: 'btn sm err-line', onclick: () => onGoto(l.line, l.col) }, String(l.line)))) : null,
+    h('pre', null, h('code', null, message)));
+}
+
+export function runSummary(run, opts = {}) {
   if (!run) return null;
-  if (run.compileError) return h('div', { class: 'notice err' }, h('strong', null, 'Erro de compilação'), h('pre', null, h('code', null, run.compileError)));
+  if (run.compileError) return compileErrorBlock(run.compileError, opts);
   const ok = run.results.filter((r) => r.status === 'PASS').length;
   return h('div', { class: 'stack' },
     h('div', { class: `notice ${ok === run.results.length ? 'ok' : 'warn'}` },

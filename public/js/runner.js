@@ -7,6 +7,7 @@ import { starterFor, exportHs, importHs, download } from './code.js';
 import { gradeAttempt, gradeTheoryItem, gradePracticeItem, isBlankCode, recomputeSummary } from './grading.js';
 import { penaltyFraction } from './scoring.js';
 import { go, onLeave } from './router.js';
+import { lineRange } from './hints.js';
 import { migrate, resume, pause, heartbeat, finalize, elapsedSec, timeModeOf } from './timer.js';
 
 const LETTERS = 'abcdefgh';
@@ -185,6 +186,14 @@ function runAttempt(root, a) {
       }
     });
     const out = h('div', { class: 'stack', style: 'margin-top:12px' });
+    const gotoLine = (line) => {
+      const range = lineRange(ta.value, line);
+      if (!range) return;
+      ta.focus(); ta.setSelectionRange(range[0], range[1]);
+      const lh = parseFloat(getComputedStyle(ta).lineHeight) || 20;
+      ta.scrollTop = Math.max(0, (line - 3) * lh);
+      ta.scrollIntoView({ block: 'nearest' });
+    };
     const runBtn = h('button', { class: 'btn primary', onclick: () => run() }, '▶ Executar testes');
     const fileInput = h('input', { type: 'file', accept: '.hs,.txt', style: 'display:none', onchange: async (e) => { const f = e.target.files[0]; if (!f) return; ta.value = importHs(await f.text()); ta.dispatchEvent(new Event('input')); toast(`Carregado ${f.name}`); e.target.value = ''; } });
     const updateChip = () => { const c = head.querySelectorAll('.qchip')[a.cursor]; if (c) c.className = chipClass(q, a.cursor); };
@@ -194,7 +203,7 @@ function runAttempt(root, a) {
       put(out, constraintsBlock(q, a_.lastRun?.code === a_.code ? a_.lastRun.constraints : null));
       if (a_.lastRun) {
         if (a_.lastRun.code !== a_.code) put(out, h('div', { class: 'notice warn' }, 'O código mudou desde a última execução — volta a executar os testes.'));
-        put(out, runSummary(a_.lastRun));
+        put(out, runSummary(a_.lastRun, { onGoto: gotoLine }));
       }
       if (instant) put(out, solutionBox(q));
     }

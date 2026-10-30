@@ -184,3 +184,9 @@ test('regressão: porta ocupada dá uma mensagem clara em vez de um stack trace'
     assert.doesNotMatch(r.stderr, /at .*\(node:/, 'sem stack trace');
   } finally { await new Promise((r) => blocker.close(r)); }
 });
+
+test('regressão: as linhas de erro de "solucao.hs" coincidem com as do editor, mesmo com imports', async () => {
+  const code = 'import Data.List (sort)\nsumSquares :: [Int] -> Int\nsumSquares [] = 0\nsumSquares xs = foo xs\n';
+  const r = await (await post('/api/run', { questionId: 'demoA-B01', code })).json();
+  assert.match(r.compileError, /solucao\.hs:4:\d+/, r.compileError); // a linha 4 do editor, não a 3
+});

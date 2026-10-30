@@ -39,6 +39,9 @@ test('início carrega sem erros e mostra os números do banco', { skip }, async 
   assert.match(t, /Exame original/);
   assert.equal(await b.eval('document.querySelectorAll("#nav a").length'), 6);
   assert.deepEqual(await stray(), [], 'a página inicial (estado limpo) não mostra "null"/"undefined"');
+  assert.match(t, /Estás a usar o banco de demonstração/);
+  assert.equal(await b.eval('document.querySelector("details.card").open'), true, '"Como funciona" aberto para quem ainda não fez nada');
+  assert.doesNotMatch(t, /Sugestão: treina/, 'sem histórico não há sugestão');
   noErrors();
   console.log('screens →', await b.screenshot(path.join(SHOTS, 'home-light.png')));
 });
@@ -241,4 +244,42 @@ test('regressão: o resultado de "Executar testes" fica visível sem fazer scrol
   await b.waitFor('document.querySelector(".notice.err, .test-bad, td.test-ok")', 40000);
   await b.waitFor('(() => { const r = document.querySelector(".notice.err, .notice.warn"); const e = [...document.querySelectorAll(".editor-actions ~ div .notice, .editor-actions + div .notice")][0] ?? r; const t = e.getBoundingClientRect().top; return t > 0 && t < innerHeight; })()', 5000);
   await b.send('Emulation.clearDeviceMetricsOverride');
+});
+
+test('erro de compilação: dica e link que leva o cursor à linha do erro', { skip }, async () => {
+  await b.goto(`${base}/#/train`); await b.waitFor('document.querySelector("#cnt")');
+  await b.eval('document.querySelector("input[name=type][value=theory]").click()'); await b.setValue('#cnt', '1');
+  await b.clickText('button', 'Começar treino'); await b.waitFor('document.querySelector("textarea.code")');
+  const id = await b.eval('location.hash.split("/").pop()');
+  const qid = (await (await fetch(`${base}/api/state`)).json()).attempts[id].items[0].qid;
+  const fn = bank.questions.find((q) => q.id === qid).func;
+  await b.setValue('textarea.code', `import Data.List (sort)\n${bank.questions.find((q) => q.id === qid).signature}\n${fn} = foo\n`);
+  await b.clickText('button', 'Executar testes');
+  await b.waitFor('document.querySelector(".err-line")', 40000);
+  assert.match(await b.eval('document.querySelector(".hints").innerText'), /"foo" não está definido/);
+  await b.eval('document.querySelector(".err-line").click()');
+  const sel = await b.eval('(() => { const t = document.querySelector("textarea.code"); return t.value.slice(t.selectionStart, t.selectionEnd); })()');
+  assert.equal(sel, `${fn} = foo`, 'seleciona a linha 3 (a do erro), não a linha anterior');
+});
+
+test('banco de questões: "Praticar esta questão" abre a prática com feedback imediato', { skip }, async () => {
+  await b.goto(`${base}/#/bank`); await b.waitFor('document.querySelector("tbody tr")');
+  await b.eval('[...document.querySelectorAll("tbody tr")].find(r => r.textContent.includes("demoA-B05")).click()');
+  await b.waitFor('document.querySelector(".modal")');
+  await b.clickText('.modal .btn', 'Praticar esta questão');
+  await b.waitFor('location.hash.startsWith("#/run/")');
+  await b.waitFor('document.querySelector("textarea.code")');
+  const t = await text();
+  assert.match(t, /Questão 1 de 1/); assert.match(t, /insertBST/);
+  assert.match(await b.eval('document.querySelector(".runner-head").innerText'), /Treino por tema/);
+  assert.ok(await b.eval('[...document.querySelectorAll("button")].some(e => e.textContent.includes("Ver soluções de referência"))'), 'feedback imediato: soluções disponíveis');
+});
+
+test('início: depois de terminar tentativas, sugere treinar o tema mais fraco', { skip }, async () => {
+  await b.goto(`${base}/`); await b.waitFor('document.querySelector("#view h1")');
+  const t = await text();
+  assert.match(t, /Sugestão: treina "/);
+  await b.clickText('button', 'Treinar este tema');
+  await b.waitFor('location.hash.startsWith("#/run/")'); await b.waitFor('document.querySelector(".runner-head")');
+  assert.match(await b.eval('document.querySelector(".runner-head").innerText'), /Treino —/);
 });

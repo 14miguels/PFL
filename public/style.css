@@ -118,6 +118,8 @@ details[open] > summary { margin-bottom: 6px; }
 .banner:empty { display: none; }
 .banner-item { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .banner-item > span { flex: 1 1 320px; }
+.hints { margin: 0; padding-left: 1.2em; }
+.err-line { min-width: 34px; }
 .save-status { font-size: .78rem; color: var(--muted); white-space: nowrap; }
 .save-status.error { color: var(--err); font-weight: 700; }
 

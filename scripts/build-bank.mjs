@@ -85,6 +85,7 @@ export async function buildBank() {
 
   const bank = { version: 1, themes: THEMES, difficulties: DIFFICULTIES, exams, contexts, questions };
   if (manifest.presets) bank.presets = manifest.presets;
+  if (manifest.demo) bank.demo = true;
   return { bank, errors, summary, mode, sourcesOutsideRepo: !!manifest.sourcesOutsideRepo };
 }
 

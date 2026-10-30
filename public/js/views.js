@@ -1,7 +1,8 @@
 // Vistas: início, exames originais, exame aleatório, treino por tema, histórico e banco de questões.
 import { h, put, fmt, fmtDate, fmtDuration, TYPE_LABEL, DIFF_LABEL, KIND_LABEL, STATUS_LABEL, answerBadge, toast, modal, confirmBox } from './util.js';
 import { store, saveAttempt, removeAttempt, attemptsList, finished, inProgress, questionStats, wrongIds } from './store.js';
-import { buildOriginal, buildRandom, buildTraining, buildRetry, presetsOf, poolFor } from './generator.js';
+import { buildOriginal, buildRandom, buildTraining, buildRetry, buildSingle, presetsOf, poolFor } from './generator.js';
+import { themeStats, weakestTheme } from './progress.js';
 import { go } from './router.js';
 import { metaChips, contextBlock, statementBlock, constraintsBlock } from './qview.js';
 import { normalizeTo20, penaltyFraction } from './scoring.js';
@@ -28,8 +29,10 @@ export function renderHome(root) {
   const wrong = wrongIds();
   const doneAttempts = finished();
   const resume = inProgress();
+  const weak = weakestTheme(themeStats(store.bank, stats));
   put(root, 
     h('h1', null, 'Prepara-te para os exames de PFL'),
+    store.bank.demo ? h('div', { class: 'notice', style: 'margin-bottom:12px' }, h('strong', null, 'Estás a usar o banco de demonstração'), ` (${f.total} questões originais). Para estudar com as tuas próprias questões, cria a pasta `, h('code', null, 'bank/src/'), ' — vê ', h('code', null, 'docs/BANK_FORMAT.md'), ' no repositório. Nada disso é publicado.') : null,
     h('p', { class: 'muted' }, `${f.total} questões de Haskell em ${store.bank.exams.length} ${store.bank.exams.length === 1 ? 'exame' : 'exames'}${f.excluded ? ' (Prolog excluído por completo)' : ''}. Faz exames completos, aleatórios ou treina por tema.`),
     resume.length ? h('div', { class: 'card stack' }, h('h2', null, 'Continuar'),
       resume.slice(0, 3).map((a) => h('div', { class: 'row' }, h('span', { class: 'chip' }, KIND_LABEL[a.kind]), h('strong', null, a.title), h('span', { class: 'muted small' }, fmtDate(a.createdAt)), h('span', { class: 'spacer' }),
@@ -45,6 +48,17 @@ export function renderHome(root) {
       h('div', { class: 'card' }, h('div', { class: 'label' }, 'Tentativas terminadas'), h('div', { class: 'stat' }, doneAttempts.length), h('a', { href: '#/history' }, 'Ver histórico →')),
       h('div', { class: 'card stack' }, h('div', { class: 'label' }, 'Perguntas por repetir'), h('div', { class: 'stat' }, wrong.length),
         h('button', { class: 'btn primary sm', disabled: !wrong.length, onclick: () => startAttempt(buildRetry(store.bank, wrong, { title: 'Repetição das erradas', instant: true })) }, 'Repetir só as que errei'))),
+    weak ? h('div', { class: 'card row', style: 'margin-top:14px' }, h('span', { style: 'font-size:1.4rem' }, '🎯'),
+      h('div', null, h('strong', null, `Sugestão: treina "${weak.label}"`), h('div', { class: 'small muted' }, `${weak.right} certas e ${weak.wrongN} erradas neste tema. O treino começa pelas que erraste.`)),
+      h('span', { class: 'spacer' }),
+      h('button', { class: 'btn primary', onclick: () => startAttempt(buildTraining(store.bank, { themes: [weak.t], count: 8, firstIds: new Set(weak.wrongIds) })) }, 'Treinar este tema')) : null,
+    h('details', { class: 'card', style: 'margin-top:14px', open: !doneAttempts.length && !resume.length }, h('summary', { style: 'font-size:1.05rem; color:var(--text)' }, 'Como funciona'),
+      h('ul', { class: 'small' },
+        h('li', null, h('strong', null, 'Exame original / aleatório: '), 'simula uma prova (teoria e depois prática), com tempo opcional. As soluções só aparecem depois de entregares. "Guardar e sair" pausa o tempo.'),
+        h('li', null, h('strong', null, 'Treino por tema: '), 'feedback imediato e soluções de referência (não oficiais).'),
+        h('li', null, h('strong', null, 'Prática: '), 'escreves Haskell no editor e "Executar testes" (⌘/Ctrl+Enter) corre-os localmente com o GHC. Se houver erros, o app aponta a linha e dá dicas.'),
+        h('li', null, h('strong', null, 'Teoria: '), 'clica numa opção ou usa as teclas a–e; ←/→ mudam de pergunta.'),
+        h('li', null, h('strong', null, 'Histórico: '), 'as tentativas e o teu desempenho por tema ficam só no teu computador (data/state.json).'))),
     h('div', { class: 'card', style: 'margin-top:14px' }, h('h2', null, 'Fiabilidade das respostas'),
       h('p', { class: 'small muted' }, 'Nenhuma resposta é inventada. Cada pergunta de teoria indica a origem da sua correção:'),
       h('div', { class: 'row' },
@@ -165,17 +179,12 @@ export function renderHistory(root) {
   if (!list.length) { put(root, h('div', { class: 'card empty' }, 'Ainda não fizeste nenhuma tentativa.')); return; }
 
   // por tema (último resultado de cada pergunta já feita)
-  const rows = Object.entries(store.bank.themes).map(([t, label]) => {
-    const qs = store.bank.questions.filter((q) => q.theme === t);
-    let right = 0; let wrongN = 0;
-    for (const q of qs) { const s = stats.get(q.id); if (!s?.last) continue; if (['correct', 'passed'].includes(s.last.state)) right++; else wrongN++; }
-    return { t, label, total: qs.length, right, wrongN };
-  });
+  const rows = themeStats(store.bank, stats).map((r) => ({ ...r, wrongN: r.wrongN }));
   const wrong = wrongIds();
   put(root, h('div', { class: 'card stack' }, h('div', { class: 'row' }, h('h2', { style: 'margin:0' }, 'Desempenho por tema'), h('span', { class: 'spacer' }),
     h('button', { class: 'btn primary sm', disabled: !wrong.length, onclick: () => startAttempt(buildRetry(store.bank, wrong, { instant: true })) }, `Repetir as ${wrong.length} que errei`)),
     h('table', null, h('thead', null, h('tr', null, h('th', null, 'Tema'), h('th', null, 'Certas'), h('th', null, 'Erradas'), h('th', null, 'Por fazer'), h('th', { style: 'width:30%' }, ''))),
-      h('tbody', null, rows.map((r) => h('tr', null, h('td', null, r.label), h('td', null, r.right), h('td', null, r.wrongN), h('td', null, r.total - r.right - r.wrongN), h('td', null, progressBar(r.right, r.total))))))));
+      h('tbody', null, rows.map((r) => h('tr', null, h('td', null, r.label), h('td', null, r.right), h('td', null, r.wrongN), h('td', null, r.todo), h('td', null, progressBar(r.right, r.total))))))));
 
   put(root, h('div', { class: 'card', style: 'margin-top:14px' }, h('h2', null, 'Tentativas'),
     h('table', null, h('thead', null, h('tr', null, h('th', null, 'Data'), h('th', null, 'Tipo'), h('th', null, 'Título'), h('th', null, 'Resultado'), h('th', null, 'Duração'), h('th', null, ''))),
@@ -219,5 +228,6 @@ export function renderBank(root) {
 function showQuestion(q) {
   const body = h('div', null, metaChips(q), contextBlock(q), statementBlock(q),
     q.type === 'theory' ? h('div', { class: 'options' }, q.options.map((o, i) => h('div', { class: 'option', style: 'cursor:default' }, h('span', { class: 'letter' }, 'abcdefgh'[i]), h('span', { class: 'txt' }, o)))) : constraintsBlock(q));
-  modal({ title: `${q.id}`, body, actions: [{ label: 'Fechar', value: true, primary: true }] });
+  modal({ title: `${q.id}`, body, actions: [{ label: 'Fechar', value: false }, { label: '▶ Praticar esta questão', value: true, primary: true }] })
+    .then((practice) => { if (practice) startAttempt(buildSingle(store.bank, q.id)); });
 }

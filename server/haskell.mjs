@@ -48,7 +48,9 @@ export function resolveSupport(ctx, needs = []) {
 
 const splitImports = (code) => {
   const imports = []; const rest = [];
-  for (const l of code.split('\n')) (/^import\s/.test(l) ? imports : rest).push(l);
+  // as linhas de import são movidas para o cabeçalho mas ficam em branco no corpo: os números de linha de
+  // "solucao.hs" coincidem com os do editor do estudante
+  for (const l of code.split('\n')) { if (/^import\s/.test(l)) { imports.push(l); rest.push(''); } else rest.push(l); }
   return { imports, body: rest.join('\n') };
 };
 

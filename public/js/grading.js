@@ -3,6 +3,9 @@ import { api } from './api.js';
 import { store } from './store.js';
 import { starterFor } from './code.js';
 import { gradeTheory, gradePractice, penaltyFraction, summarize } from './scoring.js';
+import { mapPool } from './pool.js';
+
+const GRADE_CONCURRENCY = 3; // o servidor limita a 2 execuções de runghc em simultâneo; a fila mantém-nas ocupadas
 
 export const isBlankCode = (q, code) => !code || !code.trim() || code.trim() === starterFor(q).trim();
 
@@ -31,16 +34,20 @@ export function recomputeSummary(a) {
 /** @param onProgress (texto) => void */
 export async function gradeAttempt(a, onProgress = () => {}) {
   const qs = a.items.map((i) => store.byId.get(i.qid));
-  // 1) correr os testes das respostas práticas que ainda não foram executadas com o código atual
+  // 1) correr (em paralelo) os testes das respostas práticas que ainda não foram executadas com o código atual
+  const pending = [];
   for (const q of qs.filter((x) => x.type === 'practice')) {
     const ans = a.answers[q.id] ?? (a.answers[q.id] = {});
     const code = ans.code ?? starterFor(q);
     if (isBlankCode(q, code)) continue;
-    if (!ans.lastRun || ans.lastRun.code !== code) {
-      onProgress(`A correr os testes de ${q.n} (${store.examOf(q).short})…`);
-      try { ans.lastRun = { code, ...(await api.run(q.id, code)) }; } catch (e) { ans.lastRun = { code, compileError: `Falha ao executar: ${e.message}`, results: [], constraints: [] }; }
-    }
+    if (!ans.lastRun || ans.lastRun.code !== code) pending.push({ q, ans, code });
   }
+  let done = 0;
+  onProgress(pending.length ? `A correr os testes (0/${pending.length})…` : 'A corrigir…');
+  await mapPool(pending, GRADE_CONCURRENCY, async ({ q, ans, code }) => {
+    try { ans.lastRun = { code, ...(await api.run(q.id, code)) }; } catch (e) { ans.lastRun = { code, compileError: `Falha ao executar: ${e.message}`, results: [], constraints: [] }; }
+    onProgress(`A correr os testes (${++done}/${pending.length})…`);
+  });
   // 2) revelar as respostas teóricas
   onProgress('A corrigir…');
   const theoryIds = qs.filter((x) => x.type === 'theory').map((x) => x.id);
