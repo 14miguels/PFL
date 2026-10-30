@@ -5,6 +5,7 @@ import { buildOriginal, buildRandom, buildTraining, buildRetry, presetsOf, poolF
 import { go } from './router.js';
 import { metaChips, contextBlock, statementBlock, constraintsBlock } from './qview.js';
 import { normalizeTo20, penaltyFraction } from './scoring.js';
+import { attemptDuration } from './timer.js';
 
 export function startAttempt(a) { saveAttempt(a, { immediate: true }); go(`/run/${a.id}`); }
 
@@ -180,7 +181,7 @@ export function renderHistory(root) {
     h('table', null, h('thead', null, h('tr', null, h('th', null, 'Data'), h('th', null, 'Tipo'), h('th', null, 'Título'), h('th', null, 'Resultado'), h('th', null, 'Duração'), h('th', null, ''))),
       h('tbody', null, list.map((a) => {
         const s = a.summary;
-        const dur = a.finishedAt && a.startedAt ? (new Date(a.finishedAt) - new Date(a.startedAt)) / 1000 : null;
+        const dur = attemptDuration(a);
         const res = a.status !== 'finished' ? h('span', { class: 'chip warn' }, 'em curso') : s?.hasPoints ? `${fmt(s.score)} / ${fmt(s.max)} (${fmt(normalizeTo20(s.score, s.max), 1)}/20)` : `${(s?.theory.correct ?? 0) + (s?.practice.correct ?? 0)} / ${(s?.theory.gradable ?? 0) + (s?.practice.gradable ?? 0)} certas`;
         const w = a.status === 'finished' ? wrongIds({ attemptId: a.id }) : [];
         return h('tr', null, h('td', { class: 'nowrap' }, fmtDate(a.createdAt)), h('td', null, h('span', { class: 'chip' }, KIND_LABEL[a.kind])), h('td', null, a.title), h('td', null, res), h('td', null, fmtDuration(dur)),

@@ -113,6 +113,14 @@ details[open] > summary { margin-bottom: 6px; }
 .mode-card:hover { transform: translateY(-2px); border-color: var(--primary); }
 .mode-card .emoji { font-size: 1.6rem; }
 
+/* avisos persistentes e estado de gravação */
+.banner { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.banner:empty { display: none; }
+.banner-item { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.banner-item > span { flex: 1 1 320px; }
+.save-status { font-size: .78rem; color: var(--muted); white-space: nowrap; }
+.save-status.error { color: var(--err); font-weight: 700; }
+
 /* corrida de exame */
 .runner-head { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); padding: 10px 0; margin-bottom: 14px; border-bottom: 1px solid var(--border); }
 .timer { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.1rem; padding: 4px 12px; border-radius: 9px; background: var(--surface-2); }

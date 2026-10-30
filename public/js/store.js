@@ -15,17 +15,43 @@ export async function init() {
   store.settings = state.settings ?? {};
 }
 
-const timers = new Map();
+// ---- gravação no servidor: debounce, repetição em caso de falha e estado observável
+const timers = new Map(); // gravações adiadas (debounce)
+const dirty = new Set(); // tentativas cuja última gravação falhou
+let inflight = 0; let retryTimer = null; let saveState = 'saved';
+const saveListeners = new Set();
+/** Atrasos em ms (exportado para os testes os poderem reduzir). */
+export const SAVE_OPTS = { debounceMs: 500, retryMs: 3000 };
+
+function refreshSaveState() {
+  const next = inflight ? 'saving' : dirty.size ? 'error' : timers.size ? 'pending' : 'saved';
+  if (next !== saveState) { saveState = next; saveListeners.forEach((f) => f(next)); }
+}
+/** Observa o estado ('saved' | 'pending' | 'saving' | 'error'); devolve a função que cancela a subscrição. */
+export function onSaveStatus(fn) { saveListeners.add(fn); fn(saveState); return () => saveListeners.delete(fn); }
+
+function sendAttempt(id) {
+  const a = store.attempts.get(id);
+  if (!a) { dirty.delete(id); refreshSaveState(); return Promise.resolve(); }
+  inflight++; refreshSaveState();
+  return api.saveAttempt(a).then(() => { dirty.delete(id); }, (e) => {
+    console.error('falha a guardar', e);
+    dirty.add(id);
+    clearTimeout(retryTimer);
+    retryTimer = setTimeout(() => { [...dirty].forEach(sendAttempt); }, SAVE_OPTS.retryMs);
+  }).finally(() => { inflight--; refreshSaveState(); });
+}
+
 /** Guarda a tentativa no servidor (com debounce, salvo `immediate`). */
 export function saveAttempt(a, { immediate = false } = {}) {
   store.attempts.set(a.id, a);
   clearTimeout(timers.get(a.id));
-  const send = () => api.saveAttempt(a).catch((e) => console.error('falha a guardar', e));
-  if (immediate) return send();
-  timers.set(a.id, setTimeout(send, 500));
+  if (immediate) { timers.delete(a.id); return sendAttempt(a.id); }
+  timers.set(a.id, setTimeout(() => { timers.delete(a.id); sendAttempt(a.id); }, SAVE_OPTS.debounceMs));
+  refreshSaveState();
 }
-export function flushAttempt(a) { clearTimeout(timers.get(a.id)); return api.saveAttempt(a).catch(() => {}); }
-export async function removeAttempt(id) { store.attempts.delete(id); await api.deleteAttempt(id); }
+export function flushAttempt(a) { clearTimeout(timers.get(a.id)); timers.delete(a.id); return sendAttempt(a.id); }
+export async function removeAttempt(id) { clearTimeout(timers.get(id)); timers.delete(id); dirty.delete(id); store.attempts.delete(id); await api.deleteAttempt(id); refreshSaveState(); }
 
 export const attemptsList = () => [...store.attempts.values()].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
 export const finished = () => attemptsList().filter((a) => a.status === 'finished');

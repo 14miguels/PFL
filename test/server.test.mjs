@@ -4,7 +4,10 @@ import { mkdtempSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
+import { spawnSync } from 'node:child_process';
+import net from 'node:net';
 import { createApp } from '../server/index.mjs';
+import { runQuestion, checkGhc, GHC_MISSING_MSG } from '../server/haskell.mjs';
 import { bank, bankFile, byId } from './helpers.mjs';
 
 let app; let base; let dir;
@@ -146,4 +149,38 @@ test('workspace: guardar e voltar a ler um ficheiro .hs', async () => {
   const r = await (await fetch(`${base}/api/workspace/demoA-B01`)).json();
   assert.equal(r.code, 'sumSquares = 1');
   assert.equal((await put('/api/workspace/..%2fx', { code: '' })).status, 400);
+});
+
+test('/api/health: GHC encontrado', async () => {
+  const { ghc } = await (await fetch(`${base}/api/health`)).json();
+  assert.equal(ghc.ok, true);
+  assert.match(ghc.ghc, /^\d+\.\d+/);
+});
+
+test('regressão: sem GHC no PATH a mensagem é clara (não "spawn runghc ENOENT")', async () => {
+  const saved = process.env.PATH;
+  process.env.PATH = mkdtempSync(path.join(tmpdir(), 'pfl-nopath-')); // diretório vazio
+  try {
+    const health = await (await fetch(`${base}/api/health`)).json();
+    assert.equal(health.ghc.ok, false);
+    assert.equal(health.ghc.message, GHC_MISSING_MSG);
+    assert.equal((await checkGhc()).ok, false);
+    const r = await runQuestion({ question: byId('demoA-B01'), ctx: null, code: ref('demoA-B01') });
+    assert.equal(r.compileError, GHC_MISSING_MSG);
+    assert.doesNotMatch(r.compileError, /ENOENT/);
+  } finally { process.env.PATH = saved; }
+  assert.equal((await checkGhc()).ok, true, 'e volta ao normal');
+});
+
+test('regressão: porta ocupada dá uma mensagem clara em vez de um stack trace', async () => {
+  const blocker = net.createServer();
+  await new Promise((r) => blocker.listen(0, '127.0.0.1', r));
+  const busy = blocker.address().port;
+  try {
+    await assert.rejects(createApp({ dataDir: dir, bankFile, port: busy }).listen(), (e) => e.code === 'EADDRINUSE');
+    const r = spawnSync(process.execPath, ['server/index.mjs'], { cwd: new URL('..', import.meta.url).pathname, env: { ...process.env, PORT: String(busy), PFL_DATA_DIR: dir, PFL_BANK: 'demo' }, encoding: 'utf8', timeout: 20000 });
+    assert.equal(r.status, 1);
+    assert.match(r.stderr, new RegExp(`porta ${busy} já está em uso`));
+    assert.doesNotMatch(r.stderr, /at .*\(node:/, 'sem stack trace');
+  } finally { await new Promise((r) => blocker.close(r)); }
 });

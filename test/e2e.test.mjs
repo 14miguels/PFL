@@ -211,3 +211,34 @@ test('nenhuma vista mostra "null", "undefined" ou "[object" por engano', { skip 
   await b.waitFor('document.querySelector(".runner-head")');
   for (let i = 0; i < 3; i++) { await b.eval('document.querySelectorAll(".qchip")[' + i + '].click()'); assert.deepEqual(await stray(), []); }
 });
+
+test('regressão: reabrir um exame deixado a meio há 2 dias retoma-o em vez de o entregar', { skip }, async () => {
+  const old = { id: 'stale1', kind: 'original', title: 'Exame de demonstração A', createdAt: new Date(Date.now() - 2 * 864e5).toISOString(), startedAt: new Date(Date.now() - 2 * 864e5).toISOString(), finishedAt: null, status: 'in-progress', instant: false, limitSec: 5400, items: bank.questions.filter((q) => q.exam === 'demo-a').map((q) => ({ qid: q.id })), answers: { 'demoA-A01': { choice: 'b' } }, results: {}, cursor: 0, config: { examId: 'demo-a' } };
+  const put = await fetch(`${base}/api/attempts/stale1`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-PFL': '1' }, body: JSON.stringify(old) });
+  assert.equal(put.status, 200);
+  await b.goto(`${base}/`); await b.eval('location.reload()'); await b.waitFor('document.querySelector("#view h1")');
+  await b.goto(`${base}/#/run/stale1`);
+  await b.waitFor('document.querySelector(".timer")');
+  await new Promise((r) => setTimeout(r, 2500));
+  assert.match(await b.eval('location.hash'), /#\/run\/stale1/, 'continua no exame');
+  const left = await b.eval('document.querySelector(".timer").textContent');
+  assert.match(left, /1:29:\d\d|1:30:00/, `o tempo restante é ~1h30, não 0: ${left}`);
+  // "Guardar e sair" pausa: o servidor fica com resumedAt = null e tempo ativo pequeno
+  await b.clickText('.runner-head button', 'Guardar e sair');
+  await b.waitFor('location.hash === "#/"');
+  await new Promise((r) => setTimeout(r, 800));
+  const st = (await (await fetch(`${base}/api/state`)).json()).attempts.stale1;
+  assert.equal(st.status, 'in-progress'); assert.equal(st.resumedAt, null); assert.ok(st.activeSec > 0 && st.activeSec < 60, `activeSec=${st.activeSec}`);
+});
+
+test('regressão: o resultado de "Executar testes" fica visível sem fazer scroll', { skip }, async () => {
+  await b.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 700, deviceScaleFactor: 1, mobile: false });
+  await b.goto(`${base}/#/train`); await b.waitFor('document.querySelector("#cnt")');
+  await b.eval('document.querySelector("input[name=type][value=theory]").click()'); await b.setValue('#cnt', '1');
+  await b.clickText('button', 'Começar treino'); await b.waitFor('document.querySelector("textarea.code")');
+  await b.setValue('textarea.code', 'x = 1');
+  await b.clickText('button', 'Executar testes');
+  await b.waitFor('document.querySelector(".notice.err, .test-bad, td.test-ok")', 40000);
+  await b.waitFor('(() => { const r = document.querySelector(".notice.err, .notice.warn"); const e = [...document.querySelectorAll(".editor-actions ~ div .notice, .editor-actions + div .notice")][0] ?? r; const t = e.getBoundingClientRect().top; return t > 0 && t < innerHeight; })()', 5000);
+  await b.send('Emulation.clearDeviceMetricsOverride');
+});

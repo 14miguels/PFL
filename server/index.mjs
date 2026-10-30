@@ -4,7 +4,7 @@ import { readFile, writeFile, rename, mkdir, stat } from 'node:fs/promises';
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runQuestion } from './haskell.mjs';
+import { runQuestion, checkGhc } from './haskell.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = path.join(root, 'public');
@@ -81,6 +81,7 @@ export function createApp({ dataDir = path.join(root, 'data'), bankFile = BANK_F
     const m = req.method;
     if (m === 'GET' && pathname === '/api/bank') return sendJson(res, 200, pub);
     if (m === 'GET' && pathname === '/api/state') return sendJson(res, 200, state);
+    if (m === 'GET' && pathname === '/api/health') return sendJson(res, 200, { ghc: await checkGhc() });
 
     if (m === 'POST' && pathname === '/api/run') {
       const { questionId, code } = await readJson(req);
@@ -189,7 +190,7 @@ export function createApp({ dataDir = path.join(root, 'data'), bankFile = BANK_F
 
   return {
     server,
-    listen: () => new Promise((resolve) => server.listen(port, '127.0.0.1', () => resolve(server.address().port))),
+    listen: () => new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', () => { server.off('error', reject); resolve(server.address().port); }); }),
     close: () => new Promise((resolve) => server.close(resolve)),
     getState: () => state,
     flush: () => writing,
@@ -197,7 +198,17 @@ export function createApp({ dataDir = path.join(root, 'data'), bankFile = BANK_F
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const app = createApp({ port: Number(process.env.PORT) || 4577 });
-  const port = await app.listen();
-  console.log(`PFL Prep a correr em http://127.0.0.1:${port}`);
+  const wanted = Number(process.env.PORT) || 4577;
+  const app = createApp({ port: wanted, ...(process.env.PFL_DATA_DIR ? { dataDir: path.resolve(process.env.PFL_DATA_DIR) } : {}) });
+  try {
+    const port = await app.listen();
+    console.log(`PFL Prep a correr em http://127.0.0.1:${port}`);
+  } catch (e) {
+    if (e.code === 'EADDRINUSE') console.error(`A porta ${wanted} já está em uso. Se a aplicação já está a correr, abre http://127.0.0.1:${wanted}; senão usa outra porta, por exemplo: PORT=${wanted + 1} npm start`);
+    else console.error(`Não foi possível arrancar o servidor: ${e.message}`);
+    process.exit(1);
+  }
+  const ghc = await checkGhc();
+  if (!ghc.ok) console.warn(`\n⚠  ${ghc.message}\n   (Podes explorar a aplicação, mas as perguntas práticas não podem ser corrigidas sem o GHC.)\n`);
+  else console.log(`GHC ${ghc.ghc} encontrado.`);
 }

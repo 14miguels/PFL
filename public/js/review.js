@@ -7,6 +7,7 @@ import { metaChips, examRules, contextBlock, statementBlock, constraintsBlock, r
 import { refsBlock } from './runner.js';
 import { normalizeTo20 } from './scoring.js';
 import { recomputeSummary } from './grading.js';
+import { attemptDuration } from './timer.js';
 import { buildRetry, buildOriginal } from './generator.js';
 import { startAttempt } from './views.js';
 
@@ -21,7 +22,7 @@ export async function renderReview(root, id) {
   const qs = a.items.map((i) => store.byId.get(i.qid));
   const revealed = await api.reveal(qs.map((q) => q.id));
   const s = a.summary;
-  const dur = a.startedAt && a.finishedAt ? (new Date(a.finishedAt) - new Date(a.startedAt)) / 1000 : null;
+  const dur = attemptDuration(a);
   const wrong = wrongIds({ attemptId: a.id });
   const wrongBlank = wrongIds({ attemptId: a.id, includeBlank: true });
   const summaryBox = h('div', { class: 'card' });
