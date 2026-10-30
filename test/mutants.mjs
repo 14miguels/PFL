@@ -43,4 +43,15 @@ export const MUTANTS = {
     { label: 'devolve as arestas em vez dos vizinhos', code: 'neighbors :: [(Int, Int)] -> Int -> [Int]\nneighbors es v = [a + b | (a, b) <- es, a == v || b == v]\n' },
     { label: 'inclui o próprio vértice', code: 'neighbors :: [(Int, Int)] -> Int -> [Int]\nneighbors es v = v : ([b | (a, b) <- es, a == v] ++ [a | (a, b) <- es, b == v])\n' },
   ],
+  'demoA-B07': [
+    { label: 'perde os valores repetidos', code: 'isort :: [Int] -> [Int]\nisort [] = []\nisort (x:xs) = insere x (isort xs)\n  where\n    insere y [] = [y]\n    insere y (z:zs)\n      | y == z = z : zs\n      | y < z = y : z : zs\n      | otherwise = z : insere y zs\n' },
+    { label: 'ordem decrescente', code: 'isort :: [Int] -> [Int]\nisort [] = []\nisort (x:xs) = insere x (isort xs)\n  where\n    insere y [] = [y]\n    insere y (z:zs)\n      | y >= z = y : z : zs\n      | otherwise = z : insere y zs\n' },
+    { label: 'uma só passagem de bolha', code: 'isort :: [Int] -> [Int]\nisort (x:y:r)\n  | x > y = y : isort (x : r)\n  | otherwise = x : isort (y : r)\nisort l = l\n' },
+  ],
+  'demoA-B08': [
+    { label: 'produto elemento a elemento', code: 'mulM :: Matriz -> Matriz -> Matriz\nmulM = zipWith (zipWith (*))\n' },
+    { label: 'esquece de transpor a segunda matriz', code: 'mulM :: Matriz -> Matriz -> Matriz\nmulM a b = [[sum (zipWith (*) l c) | c <- b] | l <- a]\n' },
+    { label: 'ordem dos operandos trocada', code: 'mulM :: Matriz -> Matriz -> Matriz\nmulM x y = [[sum (zipWith (*) l c) | c <- cols] | l <- y]\n  where cols = foldr (zipWith (:)) (repeat []) x\n' },
+    { label: 'soma em vez de multiplicar', code: 'mulM :: Matriz -> Matriz -> Matriz\nmulM a b = [[sum (zipWith (+) l c) | c <- foldr (zipWith (:)) (repeat []) b] | l <- a]\n' },
+  ],
 };

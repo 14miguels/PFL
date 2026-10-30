@@ -8,6 +8,7 @@ import { bank, byId } from './helpers.mjs';
 test('regressão: a entrega corre os testes das respostas práticas em paralelo (limitado)', async () => {
   store.bank = bank; store.byId = new Map(bank.questions.map((q) => [q.id, q]));
   const a = buildOriginal(bank, 'demo-a');
+  const nPractice = bank.questions.filter((q) => q.exam === 'demo-a' && q.type === 'practice').length;
   a.answers = Object.fromEntries(bank.questions.filter((q) => q.exam === 'demo-a' && q.type === 'practice').map((q) => [q.id, { code: q.refs[0].code }]));
   const real = globalThis.fetch;
   let now = 0; let max = 0; let runs = 0; const progress = [];
@@ -25,10 +26,10 @@ test('regressão: a entrega corre os testes das respostas práticas em paralelo 
   };
   try {
     await gradeAttempt(a, (t) => progress.push(t));
-    assert.equal(runs, 6, 'uma execução por pergunta prática respondida');
+    assert.equal(runs, nPractice, 'uma execução por pergunta prática respondida');
     assert.ok(max >= 2 && max <= 3, `concorrência observada: ${max}`);
     assert.equal(a.status, 'finished');
-    assert.ok(Object.values(a.results).filter((r) => r.state === 'passed').length === 6, 'todas as práticas passaram');
-    assert.match(progress.join('|'), /\(6\/6\)/, 'o progresso conta até ao fim');
+    assert.ok(Object.values(a.results).filter((r) => r.state === 'passed').length === nPractice, 'todas as práticas passaram');
+    assert.match(progress.join('|'), new RegExp(`\\(${nPractice}/${nPractice}\\)`), 'o progresso conta até ao fim');
   } finally { globalThis.fetch = real; }
 });
