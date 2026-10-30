@@ -54,4 +54,36 @@ export const MUTANTS = {
     { label: 'ordem dos operandos trocada', code: 'mulM :: Matriz -> Matriz -> Matriz\nmulM x y = [[sum (zipWith (*) l c) | c <- cols] | l <- y]\n  where cols = foldr (zipWith (:)) (repeat []) x\n' },
     { label: 'soma em vez de multiplicar', code: 'mulM :: Matriz -> Matriz -> Matriz\nmulM a b = [[sum (zipWith (+) l c) | c <- foldr (zipWith (:)) (repeat []) b] | l <- a]\n' },
   ],
+  'demoB-B03': [
+    { label: 'devolve a última ocorrência', code: 'findScore :: String -> [(String, Int)] -> Maybe Int\nfindScore nome xs = go (reverse xs)\n  where\n    go [] = Nothing\n    go ((n, v) : r)\n      | n == nome = Just v\n      | otherwise = go r\n' },
+    { label: 'Just 0 quando não existe', code: 'findScore :: String -> [(String, Int)] -> Maybe Int\nfindScore _ [] = Just 0\nfindScore nome ((n, v) : resto)\n  | nome == n = Just v\n  | otherwise = findScore nome resto\n' },
+    { label: 'ignora o nome', code: 'findScore :: String -> [(String, Int)] -> Maybe Int\nfindScore _ [] = Nothing\nfindScore _ ((_, v) : _) = Just v\n' },
+    { label: 'compara só a primeira letra', code: 'findScore :: String -> [(String, Int)] -> Maybe Int\nfindScore _ [] = Nothing\nfindScore nome ((n, v) : resto)\n  | take 1 nome == take 1 n = Just v\n  | otherwise = findScore nome resto\n' },
+  ],
+  'demoB-B04': [
+    { label: 'a soma multiplica', code: 'eval :: Expr -> Int\neval (Num n) = n\neval (Add a b) = eval a * eval b\neval (Mul a b) = eval a * eval b\neval (Neg e) = negate (eval e)\n' },
+    { label: 'esquece o sinal do Neg', code: 'eval :: Expr -> Int\neval (Num n) = n\neval (Add a b) = eval a + eval b\neval (Mul a b) = eval a * eval b\neval (Neg e) = eval e\n' },
+    { label: 'o produto soma', code: 'eval :: Expr -> Int\neval (Num n) = n\neval (Add a b) = eval a + eval b\neval (Mul a b) = eval a + eval b\neval (Neg e) = negate (eval e)\n' },
+  ],
+  'demoB-B05': [
+    { label: 'lista finita (não é infinita)', code: 'triangulares :: [Int]\ntriangulares = scanl1 (+) [1 .. 100]\n' },
+    { label: 'começa em 0', code: 'triangulares :: [Int]\ntriangulares = scanl (+) 0 [1 ..]\n' },
+    { label: 'quadrados em vez de triangulares', code: 'triangulares :: [Int]\ntriangulares = [n * n | n <- [1 ..]]\n' },
+  ],
+  'demoB-B06': [
+    { label: 'aplica n+1 vezes', code: 'applyN :: Int -> (a -> a) -> a -> a\napplyN 0 f x = f x\napplyN n f x = f (applyN (n - 1) f x)\n' },
+    { label: 'aplica no máximo uma vez', code: 'applyN :: Int -> (a -> a) -> a -> a\napplyN n f x = if n > 0 then f x else x\n' },
+    { label: 'ignora n', code: 'applyN :: Int -> (a -> a) -> a -> a\napplyN _ f x = f x\n' },
+    { label: 'correto mas com iterate (técnica proibida)', code: 'applyN :: Int -> (a -> a) -> a -> a\napplyN n f x = iterate f x !! n\n', violates: 'forbid-idents' },
+  ],
+  'demoB-B07': [
+    { label: 'anti-diagonal', code: 'diag :: Matriz -> [Int]\ndiag m = [linha !! (length m - 1 - i) | (i, linha) <- zip [0 ..] m]\n' },
+    { label: 'primeira coluna', code: 'diag :: Matriz -> [Int]\ndiag = map head\n' },
+    { label: 'última coluna', code: 'diag :: Matriz -> [Int]\ndiag = map last\n' },
+  ],
+  'demoB-B08': [
+    { label: 'empate: fica o último', code: 'topStudent :: [(String, [Int])] -> Maybe String\ntopStudent [] = Nothing\ntopStudent (x : xs) = Just (fst (go x xs))\n  where\n    soma (_, notas) = sum notas\n    go melhor [] = melhor\n    go melhor (y : ys)\n      | soma y >= soma melhor = go y ys\n      | otherwise = go melhor ys\n' },
+    { label: 'escolhe a menor soma', code: 'topStudent :: [(String, [Int])] -> Maybe String\ntopStudent [] = Nothing\ntopStudent (x : xs) = Just (fst (go x xs))\n  where\n    soma (_, notas) = sum notas\n    go melhor [] = melhor\n    go melhor (y : ys)\n      | soma y < soma melhor = go y ys\n      | otherwise = go melhor ys\n' },
+    { label: 'devolve sempre o primeiro aluno', code: 'topStudent :: [(String, [Int])] -> Maybe String\ntopStudent [] = Nothing\ntopStudent ((n, _) : _) = Just n\n' },
+  ],
 };
