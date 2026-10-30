@@ -199,7 +199,13 @@ export function createApp({ dataDir = path.join(root, 'data'), bankFile = BANK_F
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const wanted = Number(process.env.PORT) || 4577;
-  const app = createApp({ port: wanted, ...(process.env.PFL_DATA_DIR ? { dataDir: path.resolve(process.env.PFL_DATA_DIR) } : {}) });
+  let app;
+  try {
+    app = createApp({ port: wanted, ...(process.env.PFL_DATA_DIR ? { dataDir: path.resolve(process.env.PFL_DATA_DIR) } : {}), ...(process.env.PFL_BANK_FILE ? { bankFile: path.resolve(process.env.PFL_BANK_FILE) } : {}) });
+  } catch (e) {
+    console.error(e.code === 'ENOENT' ? `O banco de questões não foi encontrado (${e.path}). Constrói-o com "npm run build" ou arranca com "npm start".` : `Não foi possível arrancar: ${e.message}`);
+    process.exit(1);
+  }
   try {
     const port = await app.listen();
     console.log(`PFL Prep a correr em http://127.0.0.1:${port}`);

@@ -178,7 +178,7 @@ test('regressão: porta ocupada dá uma mensagem clara em vez de um stack trace'
   const busy = blocker.address().port;
   try {
     await assert.rejects(createApp({ dataDir: dir, bankFile, port: busy }).listen(), (e) => e.code === 'EADDRINUSE');
-    const r = spawnSync(process.execPath, ['server/index.mjs'], { cwd: new URL('..', import.meta.url).pathname, env: { ...process.env, PORT: String(busy), PFL_DATA_DIR: dir, PFL_BANK: 'demo' }, encoding: 'utf8', timeout: 20000 });
+    const r = spawnSync(process.execPath, ['server/index.mjs'], { cwd: new URL('..', import.meta.url).pathname, env: { ...process.env, PORT: String(busy), PFL_DATA_DIR: dir, PFL_BANK_FILE: bankFile }, encoding: 'utf8', timeout: 20000 });
     assert.equal(r.status, 1);
     assert.match(r.stderr, new RegExp(`porta ${busy} já está em uso`));
     assert.doesNotMatch(r.stderr, /at .*\(node:/, 'sem stack trace');
@@ -198,4 +198,11 @@ test('regressão: erro de compilação numa questão de IO é reportado como tal
   const rt = await (await post('/api/run', { questionId: 'demoB-B01', code: 'printTable :: [(String, Int)] -> IO ()\nprintTable xs = putStrLn (show (head ([] :: [Int])))\n' })).json();
   assert.equal(rt.compileError, null, 'uma exceção em execução não é erro de compilação');
   assert.ok(rt.results.some((x) => x.status === 'ERR'));
+});
+
+test('regressão: sem o banco construído o arranque explica o que fazer (em vez de um stack trace)', () => {
+  const r = spawnSync(process.execPath, ['server/index.mjs'], { cwd: new URL('..', import.meta.url).pathname, env: { ...process.env, PFL_DATA_DIR: dir, PFL_BANK_FILE: path.join(dir, 'nao-existe.json') }, encoding: 'utf8', timeout: 20000 });
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /npm run build|npm start/);
+  assert.doesNotMatch(r.stderr, /at .*\(node:/, 'sem stack trace');
 });
