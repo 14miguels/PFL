@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Node ${{ matrix.node }} · GHC ${{ matrix.ghc }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { node: 20, ghc: '9.4.8' }
+          - { node: 22, ghc: '9.8.4' }
+          - { node: 24, ghc: '9.12.2' }
+    env:
+      PFL_SKIP_E2E: '1' # a interface é testada no job "e2e"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: haskell-actions/setup@v2
+        with:
+          ghc-version: ${{ matrix.ghc }}
+      - name: Testes (sem dependências a instalar)
+        run: npm test
+
+  e2e:
+    name: Interface (Chrome headless)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: haskell-actions/setup@v2
+        with:
+          ghc-version: '9.12.2'
+      - name: Testes de interface
+        run: node --test test/e2e.test.mjs

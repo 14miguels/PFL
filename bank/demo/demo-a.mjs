@@ -10,7 +10,7 @@ const exam = {
   kind: 'demo',
   files: ['demo'],
   parts: { A: 'Parte 1 — teoria (escolha múltipla)', B: 'Parte 2 — prática (Haskell)' },
-  totalPoints: 11,
+  totalPoints: 20,
   penalty: { fraction: 0.25, status: 'stated', note: 'Penalização fictícia, só para demonstrar a funcionalidade: uma resposta errada desconta 25% da cotação.' },
   rules: [
     'Exame fictício, escrito para demonstrar a aplicação.',
@@ -40,47 +40,54 @@ insertBST x t@(Node l v r)
   | otherwise = t` },
     },
   },
+  {
+    id: 'mat',
+    text: 'Uma matriz é representada como uma lista de linhas:',
+    code: r`type Matriz = [[Int]]`,
+    note: 'Nota: nas matrizes desta pergunta o número de colunas é igual em todas as linhas.',
+    support: {},
+  },
 ];
 
 const questions = [
   // ------------------------------------------------------------ teoria
   {
-    id: 'demoA-A01', n: 'Pergunta 1', type: 'theory', points: 0.5, source: src('Pergunta 1'), theme: 'avaliacao', difficulty: 'facil',
+    id: 'demoA-A01', n: 'Pergunta 1', type: 'theory', points: 1, source: src('Pergunta 1'), theme: 'avaliacao', difficulty: 'facil',
     statement: 'Qual o resultado de avaliar a seguinte expressão?\n```haskell\nmap (*2) [1,2,3]\n```',
     options: ['[1,2,3,1,2,3]', '[2,4,6]', '[3,4,5]', '[2,3,4]'],
     answer: { value: 'b', status: 'confirmed', basis: BASIS },
     verify: [{ kind: 'eval', expr: 'map (*2) [1,2,3]' }],
   },
   {
-    id: 'demoA-A02', n: 'Pergunta 2', type: 'theory', points: 0.5, source: src('Pergunta 2'), theme: 'avaliacao', difficulty: 'facil',
+    id: 'demoA-A02', n: 'Pergunta 2', type: 'theory', points: 1, source: src('Pergunta 2'), theme: 'avaliacao', difficulty: 'facil',
     statement: 'Qual o resultado de avaliar a seguinte expressão?\n```haskell\nzip "ab" [1..]\n```',
     options: ["[('a',1),('b',2)]", "[('a',1),('b',1)]", "[(1,'a'),(2,'b')]", 'Erro: a lista infinita não termina'],
     answer: { value: 'a', status: 'confirmed', basis: BASIS },
     verify: [{ kind: 'eval', expr: 'zip "ab" [1..]' }],
   },
   {
-    id: 'demoA-A03', n: 'Pergunta 3', type: 'theory', points: 0.5, source: src('Pergunta 3'), theme: 'lazy', difficulty: 'media',
+    id: 'demoA-A03', n: 'Pergunta 3', type: 'theory', points: 1, source: src('Pergunta 3'), theme: 'lazy', difficulty: 'media',
     statement: 'Qual o resultado de avaliar a seguinte expressão?\n```haskell\ntake 3 (cycle [1,2])\n```',
     options: ['[1,2]', '[1,2,1]', '[1,2,2]', 'A avaliação não termina'],
     answer: { value: 'b', status: 'confirmed', basis: BASIS },
     verify: [{ kind: 'eval', expr: 'take 3 (cycle [1,2])' }],
   },
   {
-    id: 'demoA-A04', n: 'Pergunta 4', type: 'theory', points: 0.5, source: src('Pergunta 4'), theme: 'tipos', difficulty: 'media',
+    id: 'demoA-A04', n: 'Pergunta 4', type: 'theory', points: 1, source: src('Pergunta 4'), theme: 'tipos', difficulty: 'media',
     statement: 'Qual o tipo mais geral da seguinte função?\n```haskell\nf xs = null (tail xs)\n```',
     options: ['[a] -> Bool', '[Bool] -> Bool', 'a -> Bool', 'Eq a => [a] -> Bool'],
     answer: { value: 'a', status: 'confirmed', basis: BASIS },
     verify: [{ kind: 'inferred', prelude: 'f xs = null (tail xs)', name: 'f', expect: '[a] -> Bool' }],
   },
   {
-    id: 'demoA-A05', n: 'Pergunta 5', type: 'theory', points: 0.5, source: src('Pergunta 5'), theme: 'tipos', difficulty: 'facil',
+    id: 'demoA-A05', n: 'Pergunta 5', type: 'theory', points: 1, source: src('Pergunta 5'), theme: 'tipos', difficulty: 'facil',
     statement: 'Qual das seguintes expressões tem o tipo `[Int]`?',
     options: ['[1, 2, 3]', '"abc"', '(1, 2)', 'Just [1]'],
     answer: { value: 'a', status: 'confirmed', basis: BASIS },
     verify: [{ kind: 'typecheck', prelude: 'v :: [Int]', template: 'v = $OPT' }],
   },
   {
-    id: 'demoA-A06', n: 'Pergunta 6', type: 'theory', points: 0.5, source: src('Pergunta 6'), theme: 'recursao', difficulty: 'facil',
+    id: 'demoA-A06', n: 'Pergunta 6', type: 'theory', points: 1, source: src('Pergunta 6'), theme: 'recursao', difficulty: 'facil',
     statement: 'Numa função recursiva sobre listas, qual é o caso de paragem mais comum?',
     options: ['A lista vazia, `[]`', 'A lista com um só elemento apenas', 'O primeiro elemento da lista', 'Não é necessário caso de paragem'],
     answer: { value: 'a', status: 'unofficial', basis: 'Chave escrita pelo autor do projeto; sem verificação automática (serve de indicação e não conta para a nota).' },
@@ -119,7 +126,7 @@ countVowels (c:cs)
   | otherwise = countVowels cs` }],
   },
   {
-    id: 'demoA-B03', n: 'Pergunta 9', type: 'practice', points: 1, source: src('Pergunta 9', 2), theme: 'tecnicas', difficulty: 'facil',
+    id: 'demoA-B03', n: 'Pergunta 9', type: 'practice', points: 1.5, source: src('Pergunta 9', 2), theme: 'tecnicas', difficulty: 'facil',
     constraints: [noLib, C.comprehension('Tens de usar uma list comprehension.')],
     statement: 'Usando uma list comprehension, escreve `evensDoubled :: [Int] -> [Int]`, que devolve o dobro dos elementos pares de uma lista, pela mesma ordem.\nExemplos:\n```haskell\nevensDoubled [1,2,3,4] == [4,8]\nevensDoubled [1,3]     == []\n```',
     func: 'evensDoubled', signature: 'evensDoubled :: [Int] -> [Int]',
@@ -152,7 +159,7 @@ rle (c:cs) = go c 1 cs
       | otherwise = (x, n) : go y 1 ys` }],
   },
   {
-    id: 'demoA-B05', n: 'Pergunta 11', type: 'practice', points: 1.5, source: src('Pergunta 11', 3), ctx: 'bst', theme: 'arvores', difficulty: 'media',
+    id: 'demoA-B05', n: 'Pergunta 11', type: 'practice', points: 2, source: src('Pergunta 11', 3), ctx: 'bst', theme: 'arvores', difficulty: 'media',
     constraints: [noLib],
     statement: 'Escreve `insertBST :: Int -> BST -> BST`, que insere um valor numa árvore binária de pesquisa. Se o valor já existir, a árvore não muda.\nExemplos:\n```haskell\ninsertBST 2 Empty                    == Node Empty 2 Empty\ninsertBST 1 (Node Empty 2 Empty)     == Node (Node Empty 1 Empty) 2 Empty\n```',
     func: 'insertBST', signature: 'insertBST :: Int -> BST -> BST',
@@ -170,7 +177,7 @@ insertBST x t@(Node l v r)
   | otherwise = t` }],
   },
   {
-    id: 'demoA-B06', n: 'Pergunta 12', type: 'practice', points: 2, source: src('Pergunta 12', 4), ctx: 'bst', needs: ['insertBST'], theme: 'arvores', difficulty: 'dificil',
+    id: 'demoA-B06', n: 'Pergunta 12', type: 'practice', points: 2.5, source: src('Pergunta 12', 4), ctx: 'bst', needs: ['insertBST'], theme: 'arvores', difficulty: 'dificil',
     constraints: [noLib, C.recursion('Tens de usar recursão.')],
     statement: 'Escreve `inorder :: BST -> [Int]`, que devolve os valores da árvore em ordem crescente (percurso em-ordem). Podes usar a função `insertBST` da pergunta anterior.\nExemplo:\n```haskell\ninorder (insertBST 2 (insertBST 1 (insertBST 3 Empty))) == [1,2,3]\n```',
     func: 'inorder', signature: 'inorder :: BST -> [Int]',
@@ -182,6 +189,46 @@ insertBST x t@(Node l v r)
     refs: [{ status: 'unofficial', origin: 'gerada', code: r`inorder :: BST -> [Int]
 inorder Empty = []
 inorder (Node l v r) = inorder l ++ [v] ++ inorder r` }],
+  },
+  {
+    id: 'demoA-B07', n: 'Pergunta 13', type: 'practice', points: 2, source: src('Pergunta 13', 4), theme: 'ordenacao', difficulty: 'media',
+    constraints: [noLib, C.recursion('Tens de usar recursão.')],
+    statement: 'Escreve `isort :: [Int] -> [Int]`, que ordena uma lista por ordem crescente com a ordenação por inserção: cada elemento é inserido, no sítio certo, numa lista já ordenada. Os valores repetidos mantêm-se.\nExemplos:\n```haskell\nisort [3,1,2] == [1,2,3]\nisort [2,2,1] == [1,2,2]\n```',
+    func: 'isort', signature: 'isort :: [Int] -> [Int]',
+    tests: [
+      { call: 'isort [3,1,2]', expect: '[1,2,3]', origin: 'enunciado' },
+      { call: 'isort [2,2,1]', expect: '[1,2,2]', origin: 'enunciado' },
+      { call: 'isort []', expect: '[]', origin: 'gerado' },
+      { call: 'isort [5]', expect: '[5]', origin: 'gerado' },
+      { call: 'isort [4,3,2,1]', expect: '[1,2,3,4]', origin: 'gerado' },
+      { call: 'isort [1,2,3]', expect: '[1,2,3]', origin: 'gerado' },
+      { call: 'isort [-1,-5,0,-5]', expect: '[-5,-5,-1,0]', origin: 'gerado' },
+    ],
+    refs: [{ status: 'unofficial', origin: 'gerada', code: r`isort :: [Int] -> [Int]
+isort [] = []
+isort (x:xs) = insere x (isort xs)
+  where
+    insere y [] = [y]
+    insere y (z:zs)
+      | y <= z = y : z : zs
+      | otherwise = z : insere y zs` }],
+  },
+  {
+    id: 'demoA-B08', n: 'Pergunta 14', type: 'practice', points: 2.5, source: src('Pergunta 14', 4), ctx: 'mat', theme: 'matrizes', difficulty: 'dificil',
+    constraints: [noLib],
+    statement: 'Escreve `mulM :: Matriz -> Matriz -> Matriz`, que calcula o produto de duas matrizes compatíveis (o número de colunas da primeira é igual ao número de linhas da segunda). Podes assumir matrizes não vazias.\nExemplo:\n```haskell\nmulM [[1,2],[3,4]] [[5,6],[7,8]] == [[19,22],[43,50]]\n```',
+    func: 'mulM', signature: 'mulM :: Matriz -> Matriz -> Matriz',
+    tests: [
+      { call: 'mulM [[1,2],[3,4]] [[5,6],[7,8]]', expect: '[[19,22],[43,50]]', origin: 'enunciado' },
+      { call: 'mulM [[1,0],[0,1]] [[2,3],[4,5]]', expect: '[[2,3],[4,5]]', origin: 'gerado' },
+      { call: 'mulM [[1,2],[3,4]] [[0,1],[1,0]]', expect: '[[2,1],[4,3]]', origin: 'gerado' },
+      { call: 'mulM [[1,2,3],[4,5,6]] [[1,0],[0,1],[1,1]]', expect: '[[4,5],[10,11]]', origin: 'gerado' },
+      { call: 'mulM [[3]] [[4]]', expect: '[[12]]', origin: 'gerado' },
+    ],
+    refs: [{ status: 'unofficial', origin: 'gerada', code: r`mulM :: Matriz -> Matriz -> Matriz
+mulM a b = [[sum (zipWith (*) linha coluna) | coluna <- colunas] | linha <- a]
+  where
+    colunas = foldr (zipWith (:)) (repeat []) b` }],
   },
 ];
 

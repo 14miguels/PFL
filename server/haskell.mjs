@@ -7,12 +7,13 @@ import { fileURLToPath } from 'node:url';
 import { checkConstraints } from './constraints.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const ENV = { ...process.env, LANG: 'en_US.UTF-8', LC_ALL: 'en_US.UTF-8' };
+// calculado em cada chamada: o PATH pode mudar (e os testes simulam um GHC em falta)
+const env = () => ({ ...process.env, LANG: 'en_US.UTF-8', LC_ALL: 'en_US.UTF-8' });
 
 /** Corre um comando com timeout; devolve { code, stdout, stderr, timedOut }. */
 export function exec(cmd, args, { cwd, timeoutMs = 25000, input } = {}) {
   return new Promise((resolve) => {
-    const p = spawn(cmd, args, { cwd, env: ENV });
+    const p = spawn(cmd, args, { cwd, env: env() });
     let stdout = ''; let stderr = ''; let timedOut = false;
     const t = setTimeout(() => { timedOut = true; p.kill('SIGKILL'); }, timeoutMs);
     p.stdout.on('data', (d) => { stdout += d; if (stdout.length > 2e6) p.kill('SIGKILL'); });
@@ -47,7 +48,9 @@ export function resolveSupport(ctx, needs = []) {
 
 const splitImports = (code) => {
   const imports = []; const rest = [];
-  for (const l of code.split('\n')) (/^import\s/.test(l) ? imports : rest).push(l);
+  // as linhas de import são movidas para o cabeçalho mas ficam em branco no corpo: os números de linha de
+  // "solucao.hs" coincidem com os do editor do estudante
+  for (const l of code.split('\n')) { if (/^import\s/.test(l)) { imports.push(l); rest.push(''); } else rest.push(l); }
   return { imports, body: rest.join('\n') };
 };
 
@@ -106,8 +109,12 @@ main = ${io}
 `;
 }
 
+export const GHC_MISSING_MSG = 'O GHC (comando "runghc") não foi encontrado. Instala-o (https://www.haskell.org/ghcup/) e reinicia a aplicação; depois volta a executar os testes.';
+const isMissingGhc = (msg) => /ENOENT/.test(msg) && /runghc|ghc/.test(msg);
+
 /** Os erros de sintaxe por definição incompleta aparecem na linha seguinte (código gerado): explica isso. */
 function friendlyError(msg) {
+  if (isMissingGhc(msg)) return GHC_MISSING_MSG;
   return /^testes-gerados\.hs:/.test(msg)
     ? `Erro de sintaxe no fim da tua solução (definição incompleta ou indentação errada):\n${msg}`
     : msg;
@@ -151,6 +158,7 @@ export async function runQuestion({ question, ctx, code, timeoutMs = 15000 }) {
       await writeFile(path.join(dir, 'Main.hs'), ioMainSource({ code, entries, io: t.io }));
       const r = await runghc(dir, 'Main.hs', { timeoutMs: 10000 });
       if (r.timedOut) results[i] = { status: 'TIMEOUT', got: '' };
+      else if (r.code !== 0 && /^[\w.-]+\.hs:\d+:\d+: error/m.test(r.stderr)) { compileError = friendlyError(r.stderr.trim()); break; } // erro de compilação, não de execução
       else if (r.code !== 0) results[i] = { status: 'ERR', got: (r.stderr || '').trim().split('\n').slice(0, 3).join(' | ') };
       else results[i] = { status: r.stdout === t.stdout ? 'PASS' : 'FAIL', got: r.stdout };
     }
@@ -199,4 +207,11 @@ export async function equivRun({ name, sig, original, def, inputs }) {
     const r = await exec('runghc', ['--ghc-arg=-w', 'Main.hs'], { cwd: dir, timeoutMs: 30000 });
     return r.code === 0 && r.stdout.trim() === 'True';
   });
+}
+
+/** Verifica se o GHC está utilizável. Devolve { ok, ghc, runghc, message }. */
+export async function checkGhc() {
+  const [g, r] = await Promise.all([exec('ghc', ['--numeric-version'], { timeoutMs: 8000 }), exec('runghc', ['--version'], { timeoutMs: 8000 })]);
+  const ok = g.code === 0 && r.code === 0;
+  return { ok, ghc: g.code === 0 ? g.stdout.trim() : null, runghc: r.code === 0 ? r.stdout.trim() : null, message: ok ? null : GHC_MISSING_MSG };
 }

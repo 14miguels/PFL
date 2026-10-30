@@ -1,12 +1,14 @@
 // Corredor de exame/treino: ecrã inicial, navegação, resposta teórica, editor Haskell, execução de testes e entrega.
 import { h, clear, put, fmt, fmtDuration, TYPE_LABEL, KIND_LABEL, answerBadge, rich, toast, confirmBox, modal } from './util.js';
-import { store, saveAttempt, flushAttempt } from './store.js';
+import { store, saveAttempt, flushAttempt, onSaveStatus } from './store.js';
 import { api } from './api.js';
 import { metaChips, examRules, contextBlock, statementBlock, constraintsBlock, runSummary } from './qview.js';
 import { starterFor, exportHs, importHs, download } from './code.js';
 import { gradeAttempt, gradeTheoryItem, gradePracticeItem, isBlankCode, recomputeSummary } from './grading.js';
 import { penaltyFraction } from './scoring.js';
 import { go, onLeave } from './router.js';
+import { lineRange } from './hints.js';
+import { migrate, resume, pause, heartbeat, finalize, elapsedSec, timeModeOf } from './timer.js';
 
 const LETTERS = 'abcdefgh';
 const isFormField = (t) => t && ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName);
@@ -51,6 +53,7 @@ function runAttempt(root, a) {
   const qs = a.items.map((i) => store.byId.get(i.qid));
   a.cursor = Math.min(a.cursor ?? 0, qs.length - 1);
   a.answers ??= {}; a.results ??= {};
+  migrate(a); resume(a); saveAttempt(a, { immediate: true });
   const instant = !!a.instant;
   const ans = (q) => (a.answers[q.id] ??= {});
   const answered = (q) => (q.type === 'theory' ? !!ans(q).choice : ans(q).code != null && !isBlankCode(q, ans(q).code));
@@ -58,12 +61,17 @@ function runAttempt(root, a) {
   const head = h('div', { class: 'runner-head' });
   const body = h('div');
   put(root, head, body);
+  const saveEl = h('span', { class: 'save-status', 'aria-live': 'polite' });
+  const SAVE_TXT = { saved: '✓ guardado', pending: '… a guardar', saving: '… a guardar', error: '⚠ não guardado' };
+  const offSave = onSaveStatus((s) => { saveEl.textContent = SAVE_TXT[s]; saveEl.className = `save-status ${s}`; });
   const timerEl = h('span', { class: 'timer', title: a.limitSec ? 'Tempo restante' : 'Tempo decorrido' }, '');
   let interval;
   let finishing = false;
 
   const tick = () => {
-    const elapsed = (Date.now() - new Date(a.startedAt).getTime()) / 1000;
+    const elapsed = elapsedSec(a);
+    heartbeat(a);
+    if (Math.floor(elapsed) % 10 === 0) saveAttempt(a); // sinal de vida: limita o tempo perdido numa saída abrupta
     if (a.limitSec) {
       const left = a.limitSec - elapsed;
       timerEl.textContent = `⏱ ${fmtDuration(left)}`;
@@ -72,7 +80,10 @@ function runAttempt(root, a) {
     } else timerEl.textContent = `⏱ ${fmtDuration(elapsed)}`;
   };
   interval = setInterval(tick, 1000); tick();
-  onLeave(() => { clearInterval(interval); document.removeEventListener('keydown', onKey); flushAttempt(a); });
+  const leave = () => { offSave(); clearInterval(interval); document.removeEventListener('keydown', onKey); window.removeEventListener('pagehide', onHide); if (a.status !== 'finished' && timeModeOf(a) !== 'continuous') pause(a); flushAttempt(a); };
+  const onHide = () => { if (a.status !== 'finished') { if (timeModeOf(a) !== 'continuous') pause(a); flushAttempt(a); } };
+  window.addEventListener('pagehide', onHide);
+  onLeave(leave);
 
   function chipClass(q, i) {
     const r = a.results[q.id];
@@ -84,18 +95,26 @@ function runAttempt(root, a) {
     return c;
   }
 
+  function chipLabel(q, i) {
+    const r = a.results[q.id];
+    const state = instant && r ? ({ correct: 'certa', passed: 'certa', partial: 'parcial' }[r.state] ?? 'errada') : answered(q) ? 'respondida' : 'por responder';
+    return `Pergunta ${i + 1} (${TYPE_LABEL[q.type]}), ${state}${ans(q).flagged ? ', marcada para rever' : ''}`;
+  }
+
   function renderHead() {
     clear(head);
     const th = qs.filter((q) => q.type === 'theory'); const pr = qs.filter((q) => q.type === 'practice');
-    const chips = (list, prefix) => list.map((q) => { const i = qs.indexOf(q); return h('button', { class: chipClass(q, i), title: `${q.source.file} · ${q.n}`, onclick: () => goTo(i) }, String(i + 1)); });
+    const chips = (list) => list.map((q) => { const i = qs.indexOf(q); return h('button', { class: chipClass(q, i), title: `${q.source.file} · ${q.n}`, 'aria-label': chipLabel(q, i), 'aria-current': i === a.cursor ? 'true' : null, onclick: () => goTo(i) }, String(i + 1)); });
+    // teoria e prática só se separam quando a ordem já é "toda a teoria, depois toda a prática" (exames); no treino
+    // misturado uma lista única mantém os números sequenciais
+    const grouped = qs.every((q, i) => i === 0 || !(qs[i - 1].type === 'practice' && q.type === 'theory'));
     put(head, 
       h('div', { class: 'row' },
-        h('strong', null, a.title), h('span', { class: 'chip' }, KIND_LABEL[a.kind]), h('span', { class: 'spacer' }), timerEl,
-        h('button', { class: 'btn sm', onclick: () => go('/') , title: 'O progresso fica guardado' }, 'Guardar e sair'),
+        h('strong', null, a.title), h('span', { class: 'chip' }, KIND_LABEL[a.kind]), h('span', { class: 'spacer' }), saveEl, timerEl,
+        h('button', { class: 'btn sm', onclick: () => go('/'), title: timeModeOf(a) === 'continuous' ? 'O progresso fica guardado, mas o tempo continua a contar' : 'O progresso fica guardado e o tempo fica em pausa' }, 'Guardar e sair'),
         h('button', { class: 'btn primary sm', onclick: () => finish(false) }, instant ? 'Terminar treino' : 'Entregar')),
       h('div', { class: 'qnav', role: 'navigation', 'aria-label': 'Perguntas' },
-        th.length ? [h('span', { class: 'sec' }, 'Teoria'), chips(th)] : null,
-        pr.length ? [h('span', { class: 'sec' }, 'Prática'), chips(pr)] : null,
+        grouped ? [th.length ? [h('span', { class: 'sec' }, 'Teoria'), chips(th)] : null, pr.length ? [h('span', { class: 'sec' }, 'Prática'), chips(pr)] : null] : chips(qs),
         h('span', { class: 'sec' }, `${qs.filter(answered).length}/${qs.length} respondidas`)));
   }
 
@@ -174,7 +193,15 @@ function runAttempt(root, a) {
         if (ind) { e.preventDefault(); ta.setRangeText(`\n${ind}`, ta.selectionStart, ta.selectionEnd, 'end'); ta.dispatchEvent(new Event('input')); }
       }
     });
-    const out = h('div', { class: 'stack', style: 'margin-top:12px' });
+    const out = h('div', { class: 'stack result-out', style: 'margin-top:12px' });
+    const gotoLine = (line) => {
+      const range = lineRange(ta.value, line);
+      if (!range) return;
+      ta.focus(); ta.setSelectionRange(range[0], range[1]);
+      const lh = parseFloat(getComputedStyle(ta).lineHeight) || 20;
+      ta.scrollTop = Math.max(0, (line - 3) * lh);
+      ta.scrollIntoView({ block: 'nearest' });
+    };
     const runBtn = h('button', { class: 'btn primary', onclick: () => run() }, '▶ Executar testes');
     const fileInput = h('input', { type: 'file', accept: '.hs,.txt', style: 'display:none', onchange: async (e) => { const f = e.target.files[0]; if (!f) return; ta.value = importHs(await f.text()); ta.dispatchEvent(new Event('input')); toast(`Carregado ${f.name}`); e.target.value = ''; } });
     const updateChip = () => { const c = head.querySelectorAll('.qchip')[a.cursor]; if (c) c.className = chipClass(q, a.cursor); };
@@ -184,7 +211,7 @@ function runAttempt(root, a) {
       put(out, constraintsBlock(q, a_.lastRun?.code === a_.code ? a_.lastRun.constraints : null));
       if (a_.lastRun) {
         if (a_.lastRun.code !== a_.code) put(out, h('div', { class: 'notice warn' }, 'O código mudou desde a última execução — volta a executar os testes.'));
-        put(out, runSummary(a_.lastRun));
+        put(out, runSummary(a_.lastRun, { onGoto: gotoLine }));
       }
       if (instant) put(out, solutionBox(q));
     }
@@ -199,6 +226,7 @@ function runAttempt(root, a) {
         saveAttempt(a, { immediate: true });
       } catch (e) { toast(`Erro: ${e.message}`); }
       runBtn.disabled = false; renderOut(); renderHead();
+      scrollToResult(out);
     }
 
     const actions = h('div', { class: 'editor-actions' }, runBtn,
@@ -240,7 +268,7 @@ function runAttempt(root, a) {
       });
       if (!ok) { finishing = false; return; }
     }
-    clearInterval(interval);
+    clearInterval(interval); finalize(a);
     const msg = h('span', null, 'A corrigir…');
     const overlay = h('div', { class: 'modal-back' }, h('div', { class: 'modal' }, h('div', { class: 'row' }, h('span', { class: 'spinner' }), msg)));
     document.getElementById('modal-root').append(overlay);
@@ -266,6 +294,12 @@ function runAttempt(root, a) {
   document.addEventListener('keydown', onKey);
 
   renderAll();
+}
+
+/** Traz o resultado dos testes para o ecrã (em portáteis fica abaixo da dobra). */
+export function scrollToResult(el) {
+  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  el.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
 }
 
 /** Lista de soluções de referência, sempre com a etiqueta de proveniência e sem as apresentar como oficiais. */

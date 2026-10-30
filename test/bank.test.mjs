@@ -8,11 +8,10 @@ import { bank, ctxOf } from './helpers.mjs';
 
 const root = new URL('..', import.meta.url);
 
-test('banco de demonstração: contagens e estados coerentes', () => {
-  const th = bank.questions.filter((q) => q.type === 'theory');
-  const pr = bank.questions.filter((q) => q.type === 'practice');
-  assert.deepEqual([bank.exams.length, th.length, pr.length], [2, 8, 8]);
-  assert.deepEqual(th.map((q) => q.answer.status).sort(), ['confirmed', 'confirmed', 'confirmed', 'confirmed', 'confirmed', 'confirmed', 'unknown', 'unofficial']);
+test('banco de demonstração: ids únicos, estados coerentes e só há uma resposta desconhecida e uma não oficial', () => {
+  assert.equal(new Set(bank.questions.map((q) => q.id)).size, bank.questions.length);
+  const st = (s) => bank.questions.filter((q) => q.type === 'theory' && q.answer.status === s).length;
+  assert.deepEqual([st('official'), st('unknown'), st('unofficial')], [0, 1, 1], 'nenhuma resposta "oficial" (não há exames reais) e uma de cada estado especial para demonstrar a interface');
 });
 
 test('todas as questões são de demonstração (nenhum exame real) e têm tema, dificuldade e origem dos testes', () => {
@@ -50,4 +49,65 @@ test('higiene do repositório: dados pessoais e banco privado estão no .gitigno
   for (const entry of ['data/', 'node_modules/', 'bank/src/', 'bank/ocr/', 'bank/assets/', 'bank/questions.json', 'test/private/', '*.pdf', '.env']) {
     assert.ok(ignored.includes(entry), `.gitignore deve conter ${entry}`);
   }
+});
+
+test('licença e CI: MIT declarada e workflow com várias versões de Node e GHC', () => {
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.equal(pkg.license, 'MIT');
+  assert.match(readFileSync(new URL('../LICENSE', import.meta.url), 'utf8'), /^MIT License/);
+  const ci = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  for (const v of ['node: 20', 'node: 22', 'node: 24', 'haskell-actions/setup', 'npm test']) assert.ok(ci.includes(v), `ci.yml deve conter "${v}"`);
+});
+
+test('sem material de terceiros: nenhuma imagem, tipo de letra, PDF ou URL externa na interface', () => {
+  const files = execFileSync('git', ['ls-files'], { cwd: root.pathname, encoding: 'utf8' }).split('\n').filter(Boolean);
+  assert.deepEqual(files.filter((f) => /\.(png|jpe?g|gif|woff2?|ttf|otf|pdf|zip)$/i.test(f)), []);
+  for (const f of files.filter((x) => x.startsWith('public/'))) {
+    const txt = readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
+    assert.doesNotMatch(txt, /(?:src|href)=["']https?:\/\//, `${f} carrega recursos externos`);
+    assert.doesNotMatch(txt, /@import|url\(\s*["']?https?:/, `${f} importa CSS externo`);
+  }
+});
+
+test('banco de demonstração (V2): ~52 questões, 14 temas, 4 exames de 20 valores, ~45% teoria e dificuldade ~40/40/20', () => {
+  const n = bank.questions.length;
+  const th = bank.questions.filter((q) => q.type === 'theory').length;
+  assert.ok(n >= 48 && n <= 56, `${n} questões`);
+  assert.ok(th / n >= 0.40 && th / n <= 0.50, `teoria: ${(100 * th / n).toFixed(0)}%`);
+  const share = (d) => bank.questions.filter((q) => q.difficulty === d).length / n;
+  assert.ok(share('facil') >= 0.35 && share('facil') <= 0.45, `fácil ${(100 * share('facil')).toFixed(0)}%`);
+  assert.ok(share('media') >= 0.35 && share('media') <= 0.45, `média ${(100 * share('media')).toFixed(0)}%`);
+  assert.ok(share('dificil') >= 0.15 && share('dificil') <= 0.25, `difícil ${(100 * share('dificil')).toFixed(0)}%`);
+  const themes = Object.keys(bank.themes);
+  assert.equal(themes.length, 14);
+  for (const t of themes) assert.ok(bank.questions.filter((q) => q.theme === t).length >= 2, `o tema "${t}" tem menos de 2 questões`);
+  assert.deepEqual(bank.exams.map((e) => e.id), ['demo-a', 'demo-b', 'mini-a', 'mini-b']);
+  for (const e of bank.exams) {
+    assert.equal(e.totalPoints, 20, e.id);
+    const qs = bank.questions.filter((q) => q.exam === e.id);
+    assert.ok(qs.some((q) => q.type === 'theory') && qs.some((q) => q.type === 'practice'), e.id);
+    assert.ok(qs.length >= 12 && qs.length <= 14, `${e.id}: ${qs.length} questões`);
+  }
+});
+
+test('qualidade das questões: sem repetições, teoria com 4 opções, prática com testes normais e casos-limite', () => {
+  const norm = (x) => x.toLowerCase().replace(/\s+/g, ' ');
+  assert.equal(new Set(bank.questions.map((q) => norm(q.statement))).size, bank.questions.length, 'enunciados repetidos');
+  const funcs = bank.questions.filter((q) => q.func).map((q) => q.func);
+  assert.equal(new Set(funcs).size, funcs.length, 'a mesma função pedida duas vezes');
+  for (const q of bank.questions) {
+    if (q.type === 'theory') {
+      assert.equal(q.options.length, 4, q.id);
+      assert.ok(q.answer.status === 'confirmed' ? q.verify?.length : true, `${q.id}: resposta confirmada sem verificação`);
+    } else {
+      assert.ok(q.tests.length >= 2, q.id);
+      assert.ok(q.tests.some((t) => t.origin === 'enunciado') && q.tests.filter((t) => t.origin === 'gerado').length >= 1, `${q.id}: faltam exemplos do enunciado ou casos gerados`);
+      assert.ok(q.refs.length >= 1 && q.constraints.length >= 1, q.id);
+    }
+  }
+});
+
+test('os enunciados usam só a formatação suportada pela interface (sem **negrito** nem outro markdown)', () => {
+  for (const q of bank.questions) for (const t of [q.statement, ...(q.options ?? [])]) assert.doesNotMatch(t.replace(/```[\s\S]*?```/g, ''), /\*\*|__|^#{1,6}\s/m, `${q.id}: markdown não suportado`);
+  for (const c of bank.contexts) assert.doesNotMatch(`${c.text ?? ''}${c.note ?? ''}`, /\*\*/, `${c.id}: markdown não suportado`);
 });

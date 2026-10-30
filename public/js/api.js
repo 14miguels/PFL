@@ -14,6 +14,7 @@ async function call(method, path, body) {
 export const api = {
   bank: () => call('GET', '/api/bank'),
   state: () => call('GET', '/api/state'),
+  health: () => call('GET', '/api/health'),
   run: (questionId, code) => call('POST', '/api/run', { questionId, code }),
   reveal: (ids) => call('POST', '/api/reveal', { ids }),
   saveAttempt: (a) => call('PUT', `/api/attempts/${a.id}`, a),

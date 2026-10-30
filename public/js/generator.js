@@ -130,16 +130,24 @@ export function buildRandom(bank, cfg = {}, rng = Math.random) {
   });
 }
 
-/** Treino por tema: feedback imediato, sem tempo nem penalizações. cfg: { themes, types, difficulties, count, onlyGradable, unseenFirst, seenIds } */
+/** Treino por tema: feedback imediato, sem tempo nem penalizações. cfg: { themes, types, difficulties, count, onlyGradable, unseenFirst, seenIds, firstIds } */
 export function buildTraining(bank, cfg = {}, rng = Math.random) {
   let pool = poolFor(bank, { themes: cfg.themes, types: cfg.types, difficulties: cfg.difficulties, exams: cfg.exams });
   if (cfg.onlyGradable) pool = pool.filter((q) => q.type === 'practice' || ['official', 'confirmed'].includes(q.answer?.status));
   const seen = cfg.seenIds ?? new Set();
   let ordered = shuffle(pool, rng);
   if (cfg.unseenFirst) ordered = [...ordered.filter((q) => !seen.has(q.id)), ...ordered.filter((q) => seen.has(q.id))];
+  if (cfg.firstIds?.size) ordered = [...ordered.filter((q) => cfg.firstIds.has(q.id)), ...ordered.filter((q) => !cfg.firstIds.has(q.id))];
   const picked = ordered.slice(0, cfg.count ?? 10);
   const titleThemes = cfg.themes?.length ? cfg.themes.map((t) => bank.themes[t]).join(', ') : 'todos os temas';
   return baseAttempt('training', `Treino — ${titleThemes}`, picked.map((q) => q.id), { instant: true, config: { themes: cfg.themes ?? null, types: cfg.types ?? null, difficulties: cfg.difficulties ?? null, count: cfg.count ?? 10 } });
+}
+
+/** Prática de uma só questão, com feedback imediato (usada pelo Banco de questões). */
+export function buildSingle(bank, qid) {
+  const q = bank.questions.find((x) => x.id === qid);
+  if (!q) throw new Error(`questão desconhecida: ${qid}`);
+  return baseAttempt('training', `Prática — ${q.id}`, [q.id], { instant: true, config: { single: q.id } });
 }
 
 /** Repete apenas as questões indicadas (as erradas). */

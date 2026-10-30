@@ -1,6 +1,6 @@
 {
   "name": "pfl-prep",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "description": "Preparação para exames de PFL (Haskell): banco de questões, gerador de exames e corretor local.",
@@ -11,9 +11,15 @@
     "check:transcription": "node scripts/check-transcription.mjs",
     "test": "node --test test/*.test.mjs",
     "test:private": "node --test test/private/*.test.mjs",
-    "start": "node scripts/build-bank.mjs && node server/index.mjs"
+    "start": "node scripts/build-bank.mjs && node server/index.mjs",
+    "check:originality": "node scripts/check-originality.mjs"
   },
   "engines": {
     "node": ">=20"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/14miguels/PFL.git"
   }
 }
