@@ -1,6 +1,6 @@
 {
   "name": "pfl-prep",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "description": "Preparação para exames de PFL (Haskell): banco de questões, gerador de exames e corretor local.",
@@ -15,5 +15,10 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/14miguels/PFL.git"
   }
 }

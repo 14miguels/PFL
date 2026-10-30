@@ -105,7 +105,7 @@ export function compileErrorBlock(message, { onGoto = null } = {}) {
     h('strong', null, 'Erro de compilação'),
     hints.length ? h('ul', { class: 'hints small' }, hints.map((t) => h('li', null, h('strong', null, 'Dica: '), t))) : null,
     locs.length ? h('div', { class: 'row small' }, 'Ir para a linha:', locs.slice(0, 6).map((l) => h('button', { class: 'btn sm err-line', onclick: () => onGoto(l.line, l.col) }, String(l.line)))) : null,
-    h('pre', null, h('code', null, message)));
+    h('pre', { class: 'ghc-msg' }, h('code', null, message)));
 }
 
 export function runSummary(run, opts = {}) {

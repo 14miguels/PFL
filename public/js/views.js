@@ -2,7 +2,8 @@
 import { h, put, fmt, fmtDate, fmtDuration, TYPE_LABEL, DIFF_LABEL, KIND_LABEL, STATUS_LABEL, answerBadge, toast, modal, confirmBox } from './util.js';
 import { store, saveAttempt, removeAttempt, attemptsList, finished, inProgress, questionStats, wrongIds } from './store.js';
 import { buildOriginal, buildRandom, buildTraining, buildRetry, buildSingle, presetsOf, poolFor } from './generator.js';
-import { themeStats, weakestTheme } from './progress.js';
+import { themeStats, weakestTheme, trendPoints, trendSummary } from './progress.js';
+import { trendChart } from './chart.js';
 import { go } from './router.js';
 import { metaChips, contextBlock, statementBlock, constraintsBlock } from './qview.js';
 import { normalizeTo20, penaltyFraction } from './scoring.js';
@@ -181,7 +182,17 @@ export function renderHistory(root) {
   // por tema (último resultado de cada pergunta já feita)
   const rows = themeStats(store.bank, stats).map((r) => ({ ...r, wrongN: r.wrongN }));
   const wrong = wrongIds();
-  put(root, h('div', { class: 'card stack' }, h('div', { class: 'row' }, h('h2', { style: 'margin:0' }, 'Desempenho por tema'), h('span', { class: 'spacer' }),
+  const pts = trendPoints(list); const sum = trendSummary(pts, list);
+  put(root, h('div', { class: 'card stack' }, h('h2', { style: 'margin:0' }, 'Evolução da nota'),
+    h('p', { class: 'small muted', style: 'margin:0' }, 'Exames originais e aleatórios terminados, em nota /20. O treino por tema não entra aqui.'),
+    pts.length >= 2 ? trendChart(pts) : h('div', { class: 'empty' }, 'Termina pelo menos 2 exames (originais ou aleatórios) para veres a evolução.'),
+    h('dl', { class: 'kv' },
+      h('dt', null, 'Exames terminados'), h('dd', null, sum.count),
+      h('dt', null, 'Média'), h('dd', null, sum.mean == null ? '—' : `${fmt(sum.mean, 1)} / 20`),
+      h('dt', null, 'Melhor'), h('dd', null, sum.best == null ? '—' : `${fmt(sum.best, 1)} / 20`),
+      h('dt', null, 'Última'), h('dd', null, sum.last == null ? '—' : `${fmt(sum.last, 1)} / 20`),
+      h('dt', null, 'Tempo total de estudo'), h('dd', null, fmtDuration(sum.studySec)))));
+  put(root, h('div', { class: 'card stack', style: 'margin-top:14px' }, h('div', { class: 'row' }, h('h2', { style: 'margin:0' }, 'Desempenho por tema'), h('span', { class: 'spacer' }),
     h('button', { class: 'btn primary sm', disabled: !wrong.length, onclick: () => startAttempt(buildRetry(store.bank, wrong, { instant: true })) }, `Repetir as ${wrong.length} que errei`)),
     h('table', null, h('thead', null, h('tr', null, h('th', null, 'Tema'), h('th', null, 'Certas'), h('th', null, 'Erradas'), h('th', null, 'Por fazer'), h('th', { style: 'width:30%' }, ''))),
       h('tbody', null, rows.map((r) => h('tr', null, h('td', null, r.label), h('td', null, r.right), h('td', null, r.wrongN), h('td', null, r.todo), h('td', null, progressBar(r.right, r.total))))))));

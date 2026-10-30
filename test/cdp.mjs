@@ -4,12 +4,15 @@ import { mkdtempSync, existsSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-export const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-export const hasChrome = existsSync(CHROME);
+// Chrome/Chromium: CHROME tem prioridade; senão procura nos locais habituais (macOS, Linux, Windows).
+const CANDIDATES = [process.env.CHROME, '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser', 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'].filter(Boolean);
+export const CHROME = CANDIDATES.find((p) => existsSync(p));
+// precisa de WebSocket global (Node ≥ 22); PFL_SKIP_E2E=1 ignora os testes de interface
+export const hasChrome = !!CHROME && typeof WebSocket !== 'undefined' && !process.env.PFL_SKIP_E2E;
 
 export async function launch({ width = 1280, height = 900 } = {}) {
   const dir = mkdtempSync(path.join(tmpdir(), 'pfl-chrome-'));
-  const proc = spawn(CHROME, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${dir}`, '--no-first-run', '--disable-gpu', `--window-size=${width},${height}`, 'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'] });
+  const proc = spawn(CHROME, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${dir}`, '--no-first-run', '--disable-gpu', ...(process.env.CI ? ['--no-sandbox'] : []), `--window-size=${width},${height}`, 'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'] });
   const wsUrl = await new Promise((resolve, reject) => {
     let buf = '';
     const t = setTimeout(() => reject(new Error('Chrome não arrancou')), 15000);

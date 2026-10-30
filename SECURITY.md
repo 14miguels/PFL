@@ -25,6 +25,13 @@ Revisão manual do código publicado e verificação do conteúdo a publicar.
 - Ids como `__proto__` eram aceites em `/api/attempts/:id` (alteravam o protótipo do objeto de estado). Passaram a ser rejeitados (teste incluído).
 - A interface escrevia o texto "null" em alguns ecrãs (`Element.append(null)`), p. ex. na página inicial sem tentativas em curso e na revisão. Corrigido e coberto por teste.
 
+### Revisão da V2
+
+- `/api/health` é só de leitura (GET) e não expõe caminhos nem dados do utilizador; só devolve as versões do GHC.
+- `PFL_DATA_DIR` só é lido no arranque do servidor (variável de ambiente local); não é configurável pela API.
+- Sem material de terceiros no repositório (sem tipos de letra, imagens, CDN nem dependências), verificado por teste (`npm test`).
+- Os mecanismos existentes (verificação de `Host`/`Origin`, cabeçalho `X-PFL`, limites de tamanho e tempo) mantêm-se e continuam cobertos por testes.
+
 ### Limitações conhecidas
 
 - O código executado pelo "Executar testes" não está em *sandbox* (herda o ambiente do utilizador).

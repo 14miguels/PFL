@@ -6,7 +6,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 test('gravação: estado observável e repetição automática quando o servidor falha', async () => {
   SAVE_OPTS.debounceMs = 5; SAVE_OPTS.retryMs = 20;
-  const real = globalThis.fetch;
+  const real = globalThis.fetch; const realErr = console.error; console.error = () => {}; // os erros de rede são esperados
   let up = false; const bodies = [];
   globalThis.fetch = async (url, opts) => {
     if (!up) throw new TypeError('fetch failed');
@@ -28,5 +28,5 @@ test('gravação: estado observável e repetição automática quando o servidor
     assert.ok(seen.includes('pending') && seen.includes('saving'));
     await flushAttempt(a);
     assert.equal(seen.at(-1), 'saved');
-  } finally { off(); globalThis.fetch = real; store.attempts.clear(); }
+  } finally { off(); globalThis.fetch = real; console.error = realErr; store.attempts.clear(); }
 });

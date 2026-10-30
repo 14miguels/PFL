@@ -51,3 +51,21 @@ test('higiene do repositório: dados pessoais e banco privado estão no .gitigno
     assert.ok(ignored.includes(entry), `.gitignore deve conter ${entry}`);
   }
 });
+
+test('licença e CI: MIT declarada e workflow com várias versões de Node e GHC', () => {
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.equal(pkg.license, 'MIT');
+  assert.match(readFileSync(new URL('../LICENSE', import.meta.url), 'utf8'), /^MIT License/);
+  const ci = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  for (const v of ['node: 20', 'node: 22', 'node: 24', 'haskell-actions/setup', 'npm test']) assert.ok(ci.includes(v), `ci.yml deve conter "${v}"`);
+});
+
+test('sem material de terceiros: nenhuma imagem, tipo de letra, PDF ou URL externa na interface', () => {
+  const files = execFileSync('git', ['ls-files'], { cwd: root.pathname, encoding: 'utf8' }).split('\n').filter(Boolean);
+  assert.deepEqual(files.filter((f) => /\.(png|jpe?g|gif|woff2?|ttf|otf|pdf|zip)$/i.test(f)), []);
+  for (const f of files.filter((x) => x.startsWith('public/'))) {
+    const txt = readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
+    assert.doesNotMatch(txt, /(?:src|href)=["']https?:\/\//, `${f} carrega recursos externos`);
+    assert.doesNotMatch(txt, /@import|url\(\s*["']?https?:/, `${f} importa CSS externo`);
+  }
+});

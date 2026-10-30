@@ -190,3 +190,12 @@ test('regressão: as linhas de erro de "solucao.hs" coincidem com as do editor, 
   const r = await (await post('/api/run', { questionId: 'demoA-B01', code })).json();
   assert.match(r.compileError, /solucao\.hs:4:\d+/, r.compileError); // a linha 4 do editor, não a 3
 });
+
+test('regressão: erro de compilação numa questão de IO é reportado como tal (com localização)', async () => {
+  const r = await (await post('/api/run', { questionId: 'demoB-B01', code: 'printTable :: [(String, Int)] -> IO ()\nprintTable = foo\n' })).json();
+  assert.match(r.compileError, /solucao\.hs:2:\d+.*not in scope/s, JSON.stringify(r));
+  assert.ok(r.results.every((x) => x.status === 'NOT_RUN'));
+  const rt = await (await post('/api/run', { questionId: 'demoB-B01', code: 'printTable :: [(String, Int)] -> IO ()\nprintTable xs = putStrLn (show (head ([] :: [Int])))\n' })).json();
+  assert.equal(rt.compileError, null, 'uma exceção em execução não é erro de compilação');
+  assert.ok(rt.results.some((x) => x.status === 'ERR'));
+});

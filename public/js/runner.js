@@ -95,18 +95,26 @@ function runAttempt(root, a) {
     return c;
   }
 
+  function chipLabel(q, i) {
+    const r = a.results[q.id];
+    const state = instant && r ? ({ correct: 'certa', passed: 'certa', partial: 'parcial' }[r.state] ?? 'errada') : answered(q) ? 'respondida' : 'por responder';
+    return `Pergunta ${i + 1} (${TYPE_LABEL[q.type]}), ${state}${ans(q).flagged ? ', marcada para rever' : ''}`;
+  }
+
   function renderHead() {
     clear(head);
     const th = qs.filter((q) => q.type === 'theory'); const pr = qs.filter((q) => q.type === 'practice');
-    const chips = (list, prefix) => list.map((q) => { const i = qs.indexOf(q); return h('button', { class: chipClass(q, i), title: `${q.source.file} · ${q.n}`, onclick: () => goTo(i) }, String(i + 1)); });
+    const chips = (list) => list.map((q) => { const i = qs.indexOf(q); return h('button', { class: chipClass(q, i), title: `${q.source.file} · ${q.n}`, 'aria-label': chipLabel(q, i), 'aria-current': i === a.cursor ? 'true' : null, onclick: () => goTo(i) }, String(i + 1)); });
+    // teoria e prática só se separam quando a ordem já é "toda a teoria, depois toda a prática" (exames); no treino
+    // misturado uma lista única mantém os números sequenciais
+    const grouped = qs.every((q, i) => i === 0 || !(qs[i - 1].type === 'practice' && q.type === 'theory'));
     put(head, 
       h('div', { class: 'row' },
         h('strong', null, a.title), h('span', { class: 'chip' }, KIND_LABEL[a.kind]), h('span', { class: 'spacer' }), saveEl, timerEl,
         h('button', { class: 'btn sm', onclick: () => go('/'), title: timeModeOf(a) === 'continuous' ? 'O progresso fica guardado, mas o tempo continua a contar' : 'O progresso fica guardado e o tempo fica em pausa' }, 'Guardar e sair'),
         h('button', { class: 'btn primary sm', onclick: () => finish(false) }, instant ? 'Terminar treino' : 'Entregar')),
       h('div', { class: 'qnav', role: 'navigation', 'aria-label': 'Perguntas' },
-        th.length ? [h('span', { class: 'sec' }, 'Teoria'), chips(th)] : null,
-        pr.length ? [h('span', { class: 'sec' }, 'Prática'), chips(pr)] : null,
+        grouped ? [th.length ? [h('span', { class: 'sec' }, 'Teoria'), chips(th)] : null, pr.length ? [h('span', { class: 'sec' }, 'Prática'), chips(pr)] : null] : chips(qs),
         h('span', { class: 'sec' }, `${qs.filter(answered).length}/${qs.length} respondidas`)));
   }
 
@@ -185,7 +193,7 @@ function runAttempt(root, a) {
         if (ind) { e.preventDefault(); ta.setRangeText(`\n${ind}`, ta.selectionStart, ta.selectionEnd, 'end'); ta.dispatchEvent(new Event('input')); }
       }
     });
-    const out = h('div', { class: 'stack', style: 'margin-top:12px' });
+    const out = h('div', { class: 'stack result-out', style: 'margin-top:12px' });
     const gotoLine = (line) => {
       const range = lineRange(ta.value, line);
       if (!range) return;

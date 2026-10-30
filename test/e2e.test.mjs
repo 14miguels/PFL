@@ -9,7 +9,7 @@ import { bank, bankFile, byId } from './helpers.mjs';
 
 const SHOTS = process.env.SHOTS_DIR ?? mkdtempSync(path.join(tmpdir(), 'pfl-shots-'));
 let app; let base; let b;
-const skip = !hasChrome && 'Chrome não encontrado';
+const skip = !hasChrome && 'Chrome não encontrado (ou Node < 22, ou PFL_SKIP_E2E definido)';
 
 before(async () => {
   if (skip) return;
@@ -19,6 +19,15 @@ before(async () => {
 });
 after(async () => { await b?.close(); await app?.close(); });
 
+// Cria (via API) uma prática de uma só questão e abre-a: torna os testes determinísticos.
+async function openSingle(qid) {
+  const id = `single${Math.random().toString(36).slice(2, 8)}`;
+  const a = { id, kind: 'training', title: `Prática — ${qid}`, createdAt: new Date().toISOString(), startedAt: null, finishedAt: null, status: 'in-progress', instant: true, limitSec: null, items: [{ qid }], answers: {}, results: {}, config: { single: qid } };
+  assert.equal((await fetch(`${base}/api/attempts/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-PFL': '1' }, body: JSON.stringify(a) })).status, 200);
+  await b.goto(`${base}/#/run/${id}`); await b.eval('location.reload()'); // o cliente só lê o estado no arranque
+  await b.waitFor('document.querySelector("textarea.code")');
+  return id;
+}
 const text = () => b.eval('document.getElementById("view").innerText');
 // Nós de texto visíveis fora de blocos de código (em Haskell, `null` é uma função legítima).
 const stray = () => b.eval(`(() => {
@@ -236,9 +245,7 @@ test('regressão: reabrir um exame deixado a meio há 2 dias retoma-o em vez de 
 
 test('regressão: o resultado de "Executar testes" fica visível sem fazer scroll', { skip }, async () => {
   await b.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 700, deviceScaleFactor: 1, mobile: false });
-  await b.goto(`${base}/#/train`); await b.waitFor('document.querySelector("#cnt")');
-  await b.eval('document.querySelector("input[name=type][value=theory]").click()'); await b.setValue('#cnt', '1');
-  await b.clickText('button', 'Começar treino'); await b.waitFor('document.querySelector("textarea.code")');
+  await openSingle('demoA-B01');
   await b.setValue('textarea.code', 'x = 1');
   await b.clickText('button', 'Executar testes');
   await b.waitFor('document.querySelector(".notice.err, .test-bad, td.test-ok")', 40000);
@@ -247,19 +254,17 @@ test('regressão: o resultado de "Executar testes" fica visível sem fazer scrol
 });
 
 test('erro de compilação: dica e link que leva o cursor à linha do erro', { skip }, async () => {
-  await b.goto(`${base}/#/train`); await b.waitFor('document.querySelector("#cnt")');
-  await b.eval('document.querySelector("input[name=type][value=theory]").click()'); await b.setValue('#cnt', '1');
-  await b.clickText('button', 'Começar treino'); await b.waitFor('document.querySelector("textarea.code")');
-  const id = await b.eval('location.hash.split("/").pop()');
-  const qid = (await (await fetch(`${base}/api/state`)).json()).attempts[id].items[0].qid;
-  const fn = bank.questions.find((q) => q.id === qid).func;
-  await b.setValue('textarea.code', `import Data.List (sort)\n${bank.questions.find((q) => q.id === qid).signature}\n${fn} = foo\n`);
-  await b.clickText('button', 'Executar testes');
-  await b.waitFor('document.querySelector(".err-line")', 40000);
-  assert.match(await b.eval('document.querySelector(".hints").innerText'), /"foo" não está definido/);
-  await b.eval('document.querySelector(".err-line").click()');
-  const sel = await b.eval('(() => { const t = document.querySelector("textarea.code"); return t.value.slice(t.selectionStart, t.selectionEnd); })()');
-  assert.equal(sel, `${fn} = foo`, 'seleciona a linha 3 (a do erro), não a linha anterior');
+  for (const qid of ['demoA-B01', 'demoB-B01']) { // expressão (call) e IO
+    await openSingle(qid);
+    const q = bank.questions.find((x) => x.id === qid);
+    await b.setValue('textarea.code', `import Data.List (sort)\n${q.signature}\n${q.func} = foo\n`);
+    await b.clickText('button', 'Executar testes');
+    await b.waitFor('document.querySelector(".err-line")', 40000);
+    assert.match(await b.eval('document.querySelector(".hints").innerText'), /"foo" não está definido/);
+    await b.eval('document.querySelector(".err-line").click()');
+    const sel = await b.eval('(() => { const t = document.querySelector("textarea.code"); return t.value.slice(t.selectionStart, t.selectionEnd); })()');
+    assert.equal(sel, `${q.func} = foo`, `${qid}: seleciona a linha 3 (a do erro), não a anterior`);
+  }
 });
 
 test('banco de questões: "Praticar esta questão" abre a prática com feedback imediato', { skip }, async () => {
@@ -282,4 +287,36 @@ test('início: depois de terminar tentativas, sugere treinar o tema mais fraco',
   await b.clickText('button', 'Treinar este tema');
   await b.waitFor('location.hash.startsWith("#/run/")'); await b.waitFor('document.querySelector(".runner-head")');
   assert.match(await b.eval('document.querySelector(".runner-head").innerText'), /Treino —/);
+});
+
+test('histórico: gráfico de evolução da nota com tooltip, e cartões da página inicial alinhados', { skip }, async () => {
+  const H = { 'Content-Type': 'application/json', 'X-PFL': '1' };
+  for (const [i, score] of [[1, 12], [2, 16]]) {
+    const a = { id: `seed${i}`, kind: 'random', title: `Exame aleatório ${i}`, status: 'finished', createdAt: new Date(Date.now() - (5 - i) * 864e5).toISOString(), startedAt: new Date(Date.now() - (5 - i) * 864e5).toISOString(), finishedAt: new Date(Date.now() - (5 - i) * 864e5 + 6e5).toISOString(), durationSec: 600, items: [], answers: {}, results: {}, summary: { hasPoints: true, score, max: 20, theory: { score, max: 20, correct: 0, gradable: 0, ungraded: 0 }, practice: { score: 0, max: 0, correct: 0, gradable: 0 } } };
+    assert.equal((await fetch(`${base}/api/attempts/${a.id}`, { method: 'PUT', headers: H, body: JSON.stringify(a) })).status, 200);
+  }
+  await b.goto(`${base}/`); await b.eval('location.reload()'); await b.waitFor('document.querySelector("#view h1")');
+  await b.goto(`${base}/#/history`); await b.waitFor('document.querySelector(".chart svg")');
+  assert.ok((await b.eval('document.querySelectorAll(".chart-hit").length')) >= 3);
+  assert.match(await b.eval('document.querySelector(".chart svg").getAttribute("aria-label")'), /Evolução da nota/);
+  await b.eval('document.querySelectorAll(".chart-hit")[1].dispatchEvent(new Event("mouseenter"))');
+  assert.equal(await b.eval('document.querySelector(".chart-tip").hidden'), false);
+  assert.match(await b.eval('document.querySelector(".chart-tip").innerText'), /\/ 20/);
+  assert.match(await text(), /Tempo total de estudo/);
+  assert.equal(await b.eval('getComputedStyle(document.querySelector(".chart polyline")).strokeWidth'), '2px');
+  await b.screenshot(path.join(SHOTS, 'history-chart.png'));
+  // cartões de modo alinhados (antes: o primeiro ficava 14 px acima dos outros)
+  await b.goto(`${base}/`); await b.waitFor('document.querySelector(".mode-card")');
+  const tops = await b.eval('[...document.querySelectorAll(".mode-card")].map(e => Math.round(e.getBoundingClientRect().top))');
+  assert.equal(new Set(tops).size, 1, `tops: ${tops}`);
+  noErrors();
+});
+
+test('treino misto: chips numerados em sequência e com aria-label', { skip }, async () => {
+  await b.goto(`${base}/#/train`); await b.waitFor('document.querySelector("#cnt")');
+  await b.setValue('#cnt', '8'); await b.clickText('button', 'Começar treino'); await b.waitFor('document.querySelector(".qchip")');
+  const labels = await b.eval('[...document.querySelectorAll(".qchip")].map(e => e.textContent)');
+  assert.deepEqual(labels, labels.map((_, i) => String(i + 1)), 'numeração 1..N sem saltos');
+  assert.match(await b.eval('document.querySelector(".qchip").getAttribute("aria-label")'), /^Pergunta 1 \((Teoria|Prática)\), (por responder|respondida)/);
+  assert.equal(await b.eval('document.querySelector(".qchip.current").getAttribute("aria-current")'), 'true');
 });

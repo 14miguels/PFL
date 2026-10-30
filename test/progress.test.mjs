@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { themeStats, weakestTheme } from '../public/js/progress.js';
+import { themeStats, weakestTheme, trendPoints, trendSummary } from '../public/js/progress.js';
 import { buildSingle, buildTraining, mulberry32 } from '../public/js/generator.js';
 import { bank } from './helpers.mjs';
 
@@ -37,4 +37,24 @@ test('buildTraining com firstIds põe primeiro as perguntas indicadas', () => {
     const t = buildTraining(bank, { count: 2, firstIds: first }, mulberry32(seed));
     assert.deepEqual(new Set(t.items.map((i) => i.qid)), first);
   }
+});
+
+const fin = (id, kind, score, max, finishedAt, extra = {}) => ({ id, kind, title: id, status: 'finished', finishedAt, startedAt: finishedAt, durationSec: 600, summary: { hasPoints: true, score, max }, ...extra });
+
+test('trendPoints: só exames terminados com nota, por ordem cronológica, em /20', () => {
+  const list = [
+    fin('c', 'original', 15, 20, '2026-03-03T10:00:00Z'),
+    fin('a', 'random', 5, 10, '2026-03-01T10:00:00Z'),
+    fin('t', 'training', 9, 10, '2026-03-02T10:00:00Z'), // treino não entra
+    { ...fin('np', 'original', 0, 0, '2026-03-04T10:00:00Z'), summary: { hasPoints: false } },
+    { ...fin('open', 'original', 1, 2, '2026-03-05T10:00:00Z'), status: 'in-progress' },
+  ];
+  const pts = trendPoints(list);
+  assert.deepEqual(pts.map((p) => [p.id, p.score20]), [['a', 10], ['c', 15]]);
+});
+
+test('trendSummary: média, melhor, última e tempo total de estudo', () => {
+  const list = [fin('a', 'random', 5, 10, '2026-03-01T10:00:00Z', { durationSec: 600 }), fin('c', 'original', 15, 20, '2026-03-03T10:00:00Z', { durationSec: 1200 }), fin('t', 'training', 9, 10, '2026-03-02T10:00:00Z', { durationSec: 300 })];
+  assert.deepEqual(trendSummary(trendPoints(list), list), { count: 2, mean: 12.5, best: 15, last: 15, studySec: 2100 });
+  assert.deepEqual(trendSummary([], []), { count: 0, mean: null, best: null, last: null, studySec: 0 });
 });

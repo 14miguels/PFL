@@ -158,6 +158,7 @@ export async function runQuestion({ question, ctx, code, timeoutMs = 15000 }) {
       await writeFile(path.join(dir, 'Main.hs'), ioMainSource({ code, entries, io: t.io }));
       const r = await runghc(dir, 'Main.hs', { timeoutMs: 10000 });
       if (r.timedOut) results[i] = { status: 'TIMEOUT', got: '' };
+      else if (r.code !== 0 && /^[\w.-]+\.hs:\d+:\d+: error/m.test(r.stderr)) { compileError = friendlyError(r.stderr.trim()); break; } // erro de compilação, não de execução
       else if (r.code !== 0) results[i] = { status: 'ERR', got: (r.stderr || '').trim().split('\n').slice(0, 3).join(' | ') };
       else results[i] = { status: r.stdout === t.stdout ? 'PASS' : 'FAIL', got: r.stdout };
     }
